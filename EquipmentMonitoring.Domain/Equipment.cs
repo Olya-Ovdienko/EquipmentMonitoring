@@ -7,6 +7,8 @@ public class Equipment
     public string Type { get; }
     public string SerialNumber { get; }
     public string Location { get; }
+    public EquipmentStatus Status { get; }
+    public DateTime CreatedAt { get; }
 
     public Equipment(string name, string type, string serialNumber, string location)
     {
@@ -15,5 +17,6 @@ public class Equipment
         Type = type;
         SerialNumber = serialNumber;
         Location = location;
+        CreatedAt = DateTime.UtcNow;
     }
 }
