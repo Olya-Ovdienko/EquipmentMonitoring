@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="EquipmentMonitoring.API/EquipmentMonitoring.API.csproj" Id="7c74c2e4-78f0-4cc7-a61d-3cca4a44ec40" />
+  <Project Path="EquipmentMonitoring.Application/EquipmentMonitoring.Application.csproj" Id="23b9da3d-bf45-45e1-ba2d-70c3a133b00e" />
+  <Project Path="EquipmentMonitoring.Domain/EquipmentMonitoring.Domain.csproj" Id="c2628f4c-0b26-4d84-89fc-50431a824963" />
+  <Project Path="EquipmentMonitoring.Infrastructure/EquipmentMonitoring.Infrastructure.csproj" Id="fc13dbf5-12d5-499f-b46a-f4f164750870" />
+  <Project Path="EquipmentMonitoring.Tests/EquipmentMonitoring.Tests.csproj" Id="a38bdcba-9ffd-493a-a32f-25838f26386b" />
+</Solution>
