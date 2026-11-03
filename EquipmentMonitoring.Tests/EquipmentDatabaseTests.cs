@@ -66,4 +66,37 @@ public class EquipmentDatabaseTests
         await Assert.ThrowsAsync<DbUpdateException>(
             () => context.SaveChangesAsync(TestContext.Current.CancellationToken));
     }
+
+    [Fact]
+    public async Task Equipment_Should_Save_And_Load_All_Properties()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync(cancellationToken);
+
+        var options = new DbContextOptionsBuilder<EquipmentDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        var equipment = new Equipment("Laptop", "Computer", "SN-100", "Office 1");
+
+        await using (var writeContext = new EquipmentDbContext(options))
+        {
+            await writeContext.Database.EnsureCreatedAsync(cancellationToken);
+            writeContext.Equipments.Add(equipment);
+            await writeContext.SaveChangesAsync(cancellationToken);
+        }
+
+        await using var readContext = new EquipmentDbContext(options);
+        var loadedEquipment = await readContext.Equipments
+            .AsNoTracking()
+            .SingleAsync(item => item.Id == equipment.Id, cancellationToken);
+
+        Assert.Equal(equipment.Id, loadedEquipment.Id);
+        Assert.Equal(equipment.Name, loadedEquipment.Name);
+        Assert.Equal(equipment.Type, loadedEquipment.Type);
+        Assert.Equal(equipment.SerialNumber, loadedEquipment.SerialNumber);
+        Assert.Equal(equipment.Location, loadedEquipment.Location);
+        Assert.Equal(equipment.Status, loadedEquipment.Status);
+        Assert.Equal(equipment.CreatedAt, loadedEquipment.CreatedAt);
+    }
 }
