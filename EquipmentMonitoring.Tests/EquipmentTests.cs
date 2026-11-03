@@ -45,4 +45,33 @@ public class EquipmentTests
         Assert.Equal(DateTimeKind.Utc, equipment.CreatedAt.Kind);
 
     }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Equipment_Should_Reject_Empty_Or_Whitespace_Name(string? name)
+    {
+        Assert.ThrowsAny<ArgumentException>(() =>
+            new Equipment(name!, "Computer", "SN-001", "Office 1"));
+    }
+
+    [Fact]
+    public void Equipment_Should_Accept_Name_Of_100_Characters()
+    {
+        var name = new string('A', 100);
+
+        var equipment = new Equipment(name, "Computer", "SN-001", "Office 1");
+
+        Assert.Equal(name, equipment.Name);
+    }
+
+    [Fact]
+    public void Equipment_Should_Reject_Name_Of_101_Characters()
+    {
+        var name = new string('A', 101);
+
+        Assert.ThrowsAny<ArgumentException>(() =>
+            new Equipment(name, "Computer", "SN-001", "Office 1"));
+    }
 }
