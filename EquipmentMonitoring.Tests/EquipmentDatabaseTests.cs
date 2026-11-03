@@ -50,19 +50,20 @@ public class EquipmentDatabaseTests
     public async Task Equipment_Should_Not_Save_Duplicate_SerialNumbers()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
-        await connection.OpenAsync();
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
 
         var options = new DbContextOptionsBuilder<EquipmentDbContext>()
             .UseSqlite(connection)
             .Options;
         await using var context = new EquipmentDbContext(options);
-        await context.Database.EnsureCreatedAsync();
+        await context.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
 
         context.Set<Equipment>().Add(new Equipment("Laptop", "Computer", "SN-001", "Office 1"));
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         context.Set<Equipment>().Add(new Equipment("Monitor", "Display", "SN-001", "Office 2"));
 
-        await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
+        await Assert.ThrowsAsync<DbUpdateException>(
+            () => context.SaveChangesAsync(TestContext.Current.CancellationToken));
     }
 }
