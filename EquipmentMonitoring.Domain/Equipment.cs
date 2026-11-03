@@ -12,6 +12,16 @@ public class Equipment
 
     public Equipment(string name, string type, string serialNumber, string location)
     {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Name cannot be null, empty, or whitespace.", nameof(name));
+        }
+
+        if (name.Length > 100)
+        {
+            throw new ArgumentException("Name cannot exceed 100 characters.", nameof(name));
+        }
+
         Id = Guid.NewGuid();
         Name = name;
         Type = type;
