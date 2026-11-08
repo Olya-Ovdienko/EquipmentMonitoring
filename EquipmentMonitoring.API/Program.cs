@@ -4,6 +4,7 @@ using EquipmentMonitoring.Application.DTOs;
 using EquipmentMonitoring.Application.Services;
 using EquipmentMonitoring.Application.Validators;
 using EquipmentMonitoring.Infrastructure.Persistence;
+using EquipmentMonitoring.API.Swagger;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,7 +16,14 @@ builder.Services.AddControllers();
 builder.Services.Configure<ApiBehaviorOptions>(options =>
     options.SuppressModelStateInvalidFilter = true);
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.EnableAnnotations();
+    options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "EquipmentMonitoring.API.xml"));
+    options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "EquipmentMonitoring.Application.xml"));
+    options.OperationFilter<EquipmentExamplesOperationFilter>();
+    options.SchemaFilter<EquipmentExamplesOperationFilter>();
+});
 
 var connectionString = builder.Configuration.GetConnectionString("EquipmentDatabase")
     ?? $"Data Source={Path.Combine(builder.Environment.ContentRootPath, "equipmentmonitoring.db")}";
