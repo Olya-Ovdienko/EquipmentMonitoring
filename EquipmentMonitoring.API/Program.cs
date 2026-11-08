@@ -18,7 +18,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var connectionString = builder.Configuration.GetConnectionString("EquipmentDatabase")
-    ?? "Data Source=equipment-monitoring.db";
+    ?? $"Data Source={Path.Combine(builder.Environment.ContentRootPath, "equipmentmonitoring.db")}";
 builder.Services.AddDbContext<EquipmentDbContext>(options => options.UseSqlite(connectionString));
 builder.Services.AddScoped<IEquipmentSerialNumberChecker, EquipmentSerialNumberChecker>();
 builder.Services.AddScoped<IEquipmentRepository, EquipmentRepository>();
