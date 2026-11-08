@@ -23,6 +23,8 @@ builder.Services.AddSwaggerGen(options =>
     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "EquipmentMonitoring.Application.xml"));
     options.OperationFilter<EquipmentExamplesOperationFilter>();
     options.SchemaFilter<EquipmentExamplesOperationFilter>();
+    options.OperationFilter<MeasurementExamplesOperationFilter>();
+    options.SchemaFilter<MeasurementExamplesOperationFilter>();
 });
 
 var connectionString = builder.Configuration.GetConnectionString("EquipmentDatabase")

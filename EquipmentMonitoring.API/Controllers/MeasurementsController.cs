@@ -14,12 +14,13 @@ namespace EquipmentMonitoring.API.Controllers;
 public sealed class MeasurementsController(IMeasurementService measurementService) : ControllerBase
 {
     /// <summary>Creates a measurement for an existing equipment item.</summary>
-    /// <param name="request">Measurement values and the associated equipment identifier.</param>
+    /// <remarks>The request requires an existing EquipmentId and a supported Type. Value must be finite; negative values are allowed only for Temperature. Timestamp is optional UTC and cannot be in the future.</remarks>
+    /// <param name="request">Measurement values and the associated equipment identifier. EquipmentId and Type are required.</param>
     /// <param name="cancellationToken">Request cancellation token.</param>
     /// <returns>The created measurement.</returns>
-    /// <response code="201">The measurement was created.</response>
-    /// <response code="400">One or more measurement fields are invalid.</response>
-    /// <response code="404">The specified equipment does not exist.</response>
+    /// <response code="201">The measurement was created; returns its MeasurementResponseDto.</response>
+    /// <response code="400">One or more measurement fields are invalid; returns ValidationProblemDetails.</response>
+    /// <response code="404">The specified equipment does not exist; returns ProblemDetails.</response>
     [HttpPost("measurements")]
     [SwaggerOperation(
         Summary = "Create a measurement",
@@ -58,14 +59,15 @@ public sealed class MeasurementsController(IMeasurementService measurementServic
     }
 
     /// <summary>Gets the measurement history for an equipment item.</summary>
-    /// <param name="equipmentId">The equipment identifier.</param>
+    /// <remarks>Date range boundaries are inclusive. Both date filters are UTC.</remarks>
+    /// <param name="equipmentId">Required equipment Guid in the route.</param>
     /// <param name="type">Optional measurement type filter.</param>
     /// <param name="startDate">Optional inclusive UTC start date.</param>
     /// <param name="endDate">Optional inclusive UTC end date.</param>
     /// <param name="cancellationToken">Request cancellation token.</param>
     /// <returns>The matching measurements, or an empty list.</returns>
-    /// <response code="200">The history was returned, possibly empty.</response>
-    /// <response code="404">The specified equipment does not exist.</response>
+    /// <response code="200">The history was returned as an array of MeasurementResponseDto values, possibly empty.</response>
+    /// <response code="404">The specified equipment does not exist; returns ProblemDetails.</response>
     [HttpGet("equipment/{equipmentId:guid}/measurements")]
     [SwaggerOperation(
         Summary = "Get measurement history",
