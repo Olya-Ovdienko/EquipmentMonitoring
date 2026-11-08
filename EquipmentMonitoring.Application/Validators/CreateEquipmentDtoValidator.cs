@@ -34,7 +34,8 @@ public class CreateEquipmentDtoValidator : AbstractValidator<CreateEquipmentDto>
             .WithMessage("SerialNumber is required.")
             .MustAsync((_, serialNumber, cancellationToken) =>
                 serialNumberChecker.IsSerialNumberUniqueAsync(serialNumber, null, cancellationToken))
-            .WithMessage("SerialNumber must be unique.");
+            .WithMessage("SerialNumber must be unique.")
+            .WithErrorCode(EquipmentValidationErrorCodes.DuplicateSerialNumber);
 
         RuleFor(equipment => equipment.Location)
             .Cascade(CascadeMode.Stop)
