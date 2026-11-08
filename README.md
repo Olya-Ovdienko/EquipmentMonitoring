@@ -1,120 +1,129 @@
 # EquipmentMonitoring
 
-## Опис проєкту
+## Про проєкт
 
-EquipmentMonitoring — навчальна система моніторингу обладнання, розроблена на платформі ASP.NET Core Web API з використанням C# та .NET 10.
+EquipmentMonitoring — навчальний ASP.NET Core Web API для реєстрації обладнання та зберігання і перегляду його вимірювань. Рішення орієнтоване на .NET 10, SQLite та Entity Framework Core.
 
-Мета проєкту — реалізувати реєстрацію обладнання, збереження та перегляд його показників, контроль допустимих значень і планування технічного обслуговування.
+### Статус функціональності
 
-Проєкт розробляється відповідно до вимог і декомпозиції завдань, створених у Jira.
+- **EPT-4 — реєстрація обладнання:** реалізовано. Доступні створення обладнання, валідація полів і унікальності серійного номера.
+- **EPT-5 — додавання та перегляд вимірювань:** реалізовано. Доступні створення вимірювань і перегляд історії з фільтрами за типом та діапазоном дат.
+- **EPT-6 — контроль перевищень і попередження:** ще не реалізовано.
+- **EPT-7 — планування технічного обслуговування:** ще не реалізовано.
 
-## Архітектура проєкту
+## Структура рішення
 
-Рішення EquipmentMonitoring складається з п'яти проєктів:
+`EquipmentMonitoring.slnx` містить п'ять проєктів:
 
-**EquipmentMonitoring.Domain** — доменні моделі та основні сутності системи.
+- **EquipmentMonitoring.Domain** — доменні сутності та типи.
+- **EquipmentMonitoring.Application** — DTO, інтерфейси, сервіси та FluentValidation.
+- **EquipmentMonitoring.Infrastructure** — EF Core, SQLite, конфігурація DbContext, міграції та репозиторії.
+- **EquipmentMonitoring.API** — ASP.NET Core контролери, API та Swagger/OpenAPI.
+- **EquipmentMonitoring.Tests** — тести xUnit v3, включно з модульними й інтеграційними тестами.
 
-**EquipmentMonitoring.Application** — бізнес-логіка, DTO, інтерфейси та валідація даних.
+## Вимоги
 
-**EquipmentMonitoring.Infrastructure** — доступ до бази даних, Entity Framework Core та репозиторії.
+- **.NET 10 SDK** (для розробки та запуску потрібна актуальна версія SDK гілки .NET 10; проєкти цільово використовують `net10.0`).
+- Visual Studio 2026 з підтримкою ASP.NET Core або інше середовище розробки .NET.
+- Для створення БД через Package Manager Console у Visual Studio доступні EF Core Tools 10.0.14; пакет інструментів налаштований у `EquipmentMonitoring.Infrastructure`.
 
-**EquipmentMonitoring.API** — HTTP API, контролери та документація Swagger.
+## Початок роботи
 
-**EquipmentMonitoring.Tests** — модульне тестування з використанням xUnit і методології TDD.
+1. Клонуйте репозиторій і перейдіть до його каталогу:
 
-## Використані технології
+   ```powershell
+   git clone https://github.com/Olya-Ovdienko/EquipmentMonitoring.git
+   cd EquipmentMonitoring
+   ```
 
-.NET 10, ASP.NET Core Web API, C#, Entity Framework Core, SQLite, FluentValidation, Swagger / OpenAPI, xUnit v3, Git, GitHub та GitHub Copilot.
+2. Встановіть .NET 10 SDK і перевірте його наявність:
 
-## Запуск проєкту
+   ```powershell
+   dotnet --list-sdks
+   ```
 
-Для запуску необхідно встановити Visual Studio з підтримкою ASP.NET Core та .NET 10 SDK.
+   У списку має бути SDK версії `10.x`.
 
-Відкрити рішення EquipmentMonitoring.slnx у Visual Studio.
+3. Відкрийте `EquipmentMonitoring.slnx` у Visual Studio (File → Open → Project/Solution). Для запуску виберіть `EquipmentMonitoring.API` як Startup Project.
 
-Встановити EquipmentMonitoring.API як Startup Project (проєкт запуску).
+4. Відновіть NuGet-пакети з кореня репозиторію:
 
-Запустити застосунок за допомогою Ctrl + F5.
+   ```powershell
+   dotnet restore EquipmentMonitoring.slnx
+   ```
 
-Відкрити Swagger UI за адресою https://localhost:54960/swagger або за адресою, вказаною в налаштуваннях запуску.
+## Локальна SQLite-база даних
 
-## Тестування
+База створюється **окремо на кожному комп'ютері** з наявних EF Core міграцій. У репозиторії є міграції `InitialEquipment` і `AddMeasurements`. `EquipmentDbContextFactory` налаштовує SQLite-файл за шляхом `EquipmentMonitoring.API\equipmentmonitoring.db`; цей файл та SQLite journal-файли ігноруються Git, тому локальні дані не передаються іншим учасникам.
 
-Модульні тести виконуються в EquipmentMonitoring.Tests.
+### Створення бази у Visual Studio
 
-Для запуску тестів у Visual Studio використовується Test → Test Explorer → Run All Tests.
+1. Відкрийте **Tools → NuGet Package Manager → Package Manager Console**.
+2. У списку **Default project** виберіть `EquipmentMonitoring.Infrastructure`.
+3. Переконайтеся, що **Startup Project** рішення — `EquipmentMonitoring.API`.
+4. Виконайте команду:
 
-Розробка функціональності передбачає застосування циклу TDD: Red → Green → Refactor.
+   ```powershell
+   Update-Database -Project EquipmentMonitoring.Infrastructure -StartupProject EquipmentMonitoring.API -Context EquipmentDbContext
+   ```
 
-## TDD — EPT-8: Модель Equipment
+Це використовує наявний `EquipmentDbContextFactory` із проєкту Infrastructure і застосовує міграції до `EquipmentMonitoring.API\equipmentmonitoring.db`. Під час першого запуску команди EF Core створить файл БД і таблиці. Не потрібно створювати таблиці вручну або використовувати `EnsureCreated` замість міграцій.
 
-**RED** — створено модульний тест Equipment_Should_Generate_NonEmpty_Id для перевірки автоматичної генерації унікального ідентифікатора обладнання. Початкова збірка завершилася помилками через відсутність реалізації класу Equipment.
+## Запуск API та Swagger
 
-**GREEN** — реалізовано клас Equipment із властивостями Id, Name, Type, SerialNumber та Location. Додано автоматичну генерацію Id через Guid.NewGuid(). Збірка успішна, обидва тести xUnit пройдено.
+Запустіть `EquipmentMonitoring.API` у Visual Studio через **Ctrl+F5** або з кореня репозиторію командою:
 
-**REFACTOR** — за допомогою GitHub Copilot проведено аналіз якості реалізації Equipment. Код має просту та зрозумілу структуру, тому додаткові зміни не знадобилися. Повторна збірка успішна, 2 з 2 тестів пройдено.
-
-Етапи RED і GREEN зафіксовано окремими Git-комітами. Результати перевірки REFACTOR задокументовано.
-
-### Цикл 2 — Status і CreatedAt
-
-**RED** — додано три тести для EquipmentStatus, Status і CreatedAt. Збірка не пройшла через відсутність нових типів і властивостей.
-
-**GREEN** — створено EquipmentStatus із чотирма станами: Available, InUse, Maintenance, Disabled. До Equipment додано Status і CreatedAt з автоматичним встановленням часу UTC. Усі 5 тестів пройдено.
-
-**REFACTOR** — GitHub Copilot перевірив структуру та якість коду. Змін не знадобилося. Збірка успішна, 5 із 5 тестів пройдено.
-
-### Цикл 3 — Валідація Name
-
-**RED** — додано тести для перевірки обов'язковості Name та максимальної довжини 100 символів. Збірка успішна, 4 тестові випадки не пройшли.
-
-**GREEN** — реалізовано перевірки Name через string.IsNullOrWhiteSpace(name) та name.Length > 100. Некоректні значення відхиляються через ArgumentException. Усі 10 тестів пройдено.
-
-**REFACTOR** — GitHub Copilot перевірив якість і структуру коду. Зміни не знадобилися, поведінку моделі збережено. Збірка успішна, 10 із 10 тестів пройдено.
-
-### Цикл 4 — EF Core та унікальність SerialNumber
-
-**RED** — створено три тести для перевірки конфігурації EF Core, обмежень Name та унікальності SerialNumber у SQLite. Збірка не пройшла через відсутність EquipmentDbContext.
-
-**GREEN** — реалізовано EquipmentDbContext і EquipmentConfiguration. Налаштовано первинний ключ Id, обов'язковість і максимальну довжину Name, унікальний індекс SerialNumber. Усі 13 тестів пройдено.
-
-**REFACTOR** — GitHub Copilot перевірив конфігурацію EF Core та відображення властивостей Equipment. Змістовні зміни не знадобилися. Збірка успішна, 13 із 13 тестів пройдено.
-
-## Поточний стан
-
-Реалізовано доменну модель Equipment зі станом і UTC-часом створення, EF Core persistence на SQLite з міграцією та унікальним індексом SerialNumber, DTO та FluentValidation.
-
-Реалізовано реєстрацію обладнання через POST /api/v1/equipment, асинхронні AddAsync і GetByIdAsync репозиторію та обробку HTTP-відповідей 201, 400 і 409. Додано модульні, інтеграційні та HTTP-тести на xUnit v3.
-
-Інші функції моніторингу показників і планування технічного обслуговування поки не описуються як реалізовані.
-
-## Документація API
-
-Swagger UI доступний під час локального запуску в середовищі Development за адресою https://localhost:54960/swagger (або за адресою, вказаною у профілі запуску Visual Studio).
-
-### POST /api/v1/equipment
-
-Реєструє обладнання після перевірки обов'язкових полів, довжини Name, допустимого Type та унікальності SerialNumber.
-
-Приклад JSON-запиту:
-
-```json
-{
-  "name": "Temperature Sensor",
-  "type": "Датчик",
-  "serialNumber": "DOC-001",
-  "location": "Laboratory 1"
-}
+```powershell
+dotnet run --project EquipmentMonitoring.API
 ```
 
-- **201 Created** — обладнання збережено; повертається EquipmentResponseDto із серверним Id, початковим Status і CreatedAt у UTC.
-- **400 Bad Request** — помилки валідації, згруповані за полями у ValidationProblemDetails.
-- **409 Conflict** — SerialNumber уже використовується.
+Профіль запуску Visual Studio використовує середовище `Development` і адреси `https://localhost:54960` та `http://localhost:54961`. Swagger увімкнений у Development:
 
-Щоб перевірити запит у Swagger, відкрийте Swagger UI, розгорніть `POST /api/v1/equipment`, натисніть **Try it out**, задайте JSON і натисніть **Execute**. Приклади запиту та відповідей наведено в документації операції.
+- Swagger UI: `https://localhost:54960/swagger` (або `http://localhost:54961/swagger`)
+- OpenAPI JSON: `https://localhost:54960/swagger/v1/swagger.json` (або `http://localhost:54961/swagger/v1/swagger.json`)
 
-## Організація розробки
+Якщо запускаєте API на іншій адресі або порті, використовуйте відповідну адресу для Swagger.
 
-Розробка здійснюється командою з використанням Jira для керування завданнями та GitHub для контролю версій.
+## Перевірка основного сценарію через Swagger
 
-Для окремих завдань створюються робочі Git-гілки, а зміни інтегруються через Pull Requests.
+1. Відкрийте Swagger UI та виконайте `POST /api/v1/equipment`, створивши обладнання, наприклад:
+
+   ```json
+   {
+     "name": "Temperature Sensor",
+     "type": "Датчик",
+     "serialNumber": "DOC-001",
+     "location": "Laboratory 1"
+   }
+   ```
+
+2. У відповіді `201 Created` скопіюйте `id` створеного обладнання.
+3. Виконайте `POST /api/v1/measurements`. У полі `equipmentId` передайте цей `id`; вкажіть підтримуваний `type` (числове enum-значення: `0` — Temperature, `1` — Voltage, `2` — Load) і виміряне `value`. `timestamp` необов'язковий.
+4. Виконайте `GET /api/v1/equipment/{equipmentId}/measurements`, підставивши той самий Id. За потреби додайте query-фільтри `type`, `startDate` та `endDate`. Межі дат включні.
+
+> У Jira для фільтрів EPT-21 зазначені `fromDate`/`toDate`, але фактичний контракт API використовує `startDate`/`endDate`. У запитах використовуйте реальні параметри `startDate` і `endDate`.
+
+## Тести
+
+Запустити всі тести з кореня репозиторію:
+
+```powershell
+dotnet test EquipmentMonitoring.slnx
+```
+
+Або у Visual Studio відкрийте **Test → Test Explorer → Run All Tests**. Останній відомий результат команди: **208 Passed, 0 Failed**. Перед Pull Request повторно виконуйте збірку рішення та всі тести.
+
+## Командна робота
+
+- `master` — основна гілка.
+- Для кожної задачі створюйте окрему feature-гілку від актуального `master`, наприклад `feature/EPT-6-alerts` або `feature/EPT-7-maintenance`.
+- Прив'язуйте назви комітів і повідомлення до ключа Jira (наприклад, `EPT-6: ...`).
+- Інтегруйте зміни через Pull Request; перед злиттям перевіряйте збірку та всі тести.
+- Не змінюйте чужі функціональні модулі без необхідності; узгоджуйте зміни спільних контрактів із командою.
+- Не додавайте до Git локальні SQLite-файли, секрети або персональні налаштування середовища.
+
+## Основні API-маршрути
+
+- `POST /api/v1/equipment` — реєстрація обладнання.
+- `POST /api/v1/measurements` — створення вимірювання.
+- `GET /api/v1/equipment/{equipmentId}/measurements` — історія вимірювань обладнання з необов'язковими фільтрами `type`, `startDate` і `endDate`.
