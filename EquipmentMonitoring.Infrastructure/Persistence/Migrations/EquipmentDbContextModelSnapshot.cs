@@ -52,6 +52,43 @@ namespace EquipmentMonitoring.Infrastructure.Persistence.Migrations
 
                     b.ToTable("Equipments");
                 });
+
+            modelBuilder.Entity("EquipmentMonitoring.Domain.Measurement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("EquipmentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Timestamp")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("Value")
+                        .HasColumnType("REAL");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EquipmentId", "Timestamp");
+
+                    b.ToTable("Measurements", (string)null);
+                });
+
+            modelBuilder.Entity("EquipmentMonitoring.Domain.Measurement", b =>
+                {
+                    b.HasOne("EquipmentMonitoring.Domain.Equipment", null)
+                        .WithMany()
+                        .HasForeignKey("EquipmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
 #pragma warning restore 612, 618
         }
     }
