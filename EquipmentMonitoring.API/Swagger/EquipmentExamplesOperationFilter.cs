@@ -48,8 +48,8 @@ public sealed class EquipmentExamplesOperationFilter : IOperationFilter, ISchema
               "title": "One or more validation errors occurred.",
               "status": 400,
               "errors": {
-                "name": ["Name is required."],
-                "type": ["Type is not supported."]
+                "Name": ["Name is required."],
+                "Type": ["Type is not supported."]
               }
             }
             """);
