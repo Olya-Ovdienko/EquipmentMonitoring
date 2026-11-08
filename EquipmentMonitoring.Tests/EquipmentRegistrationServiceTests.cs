@@ -98,6 +98,48 @@ public class EquipmentRegistrationServiceTests
     }
 
     [Fact]
+    public async Task RegisterAsync_WithEmptyType_ThrowsValidationExceptionAndDoesNotSave()
+    {
+        // Arrange
+        var repository = new Mock<IEquipmentRepository>();
+        var serialNumberChecker = CreateUniqueSerialNumberChecker();
+        var service = CreateService(repository, serialNumberChecker);
+        var dto = CreateValidDto();
+        dto.Type = string.Empty;
+
+        // Act
+        var exception = await Assert.ThrowsAsync<ValidationException>(
+            () => service.RegisterAsync(dto, TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Contains(exception.Errors, error => error.PropertyName == nameof(CreateEquipmentDto.Type));
+        repository.Verify(
+            item => item.AddAsync(It.IsAny<Equipment>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_WithEmptyLocation_ThrowsValidationExceptionAndDoesNotSave()
+    {
+        // Arrange
+        var repository = new Mock<IEquipmentRepository>();
+        var serialNumberChecker = CreateUniqueSerialNumberChecker();
+        var service = CreateService(repository, serialNumberChecker);
+        var dto = CreateValidDto();
+        dto.Location = string.Empty;
+
+        // Act
+        var exception = await Assert.ThrowsAsync<ValidationException>(
+            () => service.RegisterAsync(dto, TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Contains(exception.Errors, error => error.PropertyName == nameof(CreateEquipmentDto.Location));
+        repository.Verify(
+            item => item.AddAsync(It.IsAny<Equipment>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task RegisterAsync_WithNameLongerThan100Characters_ThrowsValidationException()
     {
         // Arrange
