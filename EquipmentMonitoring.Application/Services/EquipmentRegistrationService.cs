@@ -19,7 +19,7 @@ public sealed class EquipmentRegistrationService(
         ValidationResult validationResult = await validator.ValidateAsync(dto, cancellationToken);
         if (!validationResult.IsValid)
         {
-            if (validationResult.Errors.Any(error =>
+            if (validationResult.Errors.All(error =>
                     error.ErrorCode == EquipmentValidationErrorCodes.DuplicateSerialNumber))
             {
                 throw new DuplicateEquipmentSerialNumberException();
