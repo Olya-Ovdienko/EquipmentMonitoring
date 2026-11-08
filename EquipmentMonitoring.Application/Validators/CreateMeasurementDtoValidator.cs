@@ -21,7 +21,8 @@ public class CreateMeasurementDtoValidator : AbstractValidator<CreateMeasurement
                 await equipmentRepository.GetByIdAsync(equipmentId!.Value, cancellationToken) is not null)
             .When(measurement => measurement.EquipmentId.HasValue
                 && measurement.EquipmentId.Value != Guid.Empty)
-            .WithMessage("EquipmentId does not refer to an existing equipment item.");
+            .WithMessage("EquipmentId does not refer to an existing equipment item.")
+            .WithErrorCode(MeasurementValidationErrorCodes.EquipmentNotFound);
 
         RuleFor(measurement => measurement.Type)
             .Cascade(CascadeMode.Stop)
@@ -36,8 +37,8 @@ public class CreateMeasurementDtoValidator : AbstractValidator<CreateMeasurement
 
         RuleFor(measurement => measurement.Value)
             .Must((measurement, value) => value >= 0)
-            .When(measurement => measurement.Type is MeasurementType.Voltage or MeasurementType.Load)
-            .WithMessage("Value must not be negative for voltage or load measurements.");
+            .When(measurement => measurement.Type != MeasurementType.Temperature)
+            .WithMessage("Value must not be negative unless the measurement type is temperature.");
 
         RuleFor(measurement => measurement.Timestamp)
             .Must(timestamp => !timestamp.HasValue || timestamp.Value <= DateTime.UtcNow)
