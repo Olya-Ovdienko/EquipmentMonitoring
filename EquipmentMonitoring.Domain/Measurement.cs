@@ -10,6 +10,11 @@ public class Measurement
     public DateTime Timestamp { get; }
 
     public Measurement(Guid equipmentId, MeasurementType type, double value)
+        : this(equipmentId, type, value, null)
+    {
+    }
+
+    public Measurement(Guid equipmentId, MeasurementType type, double value, DateTime? timestamp)
     {
         Id = Guid.NewGuid();
         EquipmentId = equipmentId;
@@ -22,6 +27,6 @@ public class Measurement
             MeasurementType.Load => "%",
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unsupported measurement type.")
         };
-        Timestamp = DateTime.UtcNow;
+        Timestamp = timestamp ?? DateTime.UtcNow;
     }
 }
