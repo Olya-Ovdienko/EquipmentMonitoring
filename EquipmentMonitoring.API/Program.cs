@@ -30,8 +30,11 @@ var connectionString = builder.Configuration.GetConnectionString("EquipmentDatab
 builder.Services.AddDbContext<EquipmentDbContext>(options => options.UseSqlite(connectionString));
 builder.Services.AddScoped<IEquipmentSerialNumberChecker, EquipmentSerialNumberChecker>();
 builder.Services.AddScoped<IEquipmentRepository, EquipmentRepository>();
+builder.Services.AddScoped<IMeasurementRepository, MeasurementRepository>();
 builder.Services.AddScoped<IEquipmentRegistrationService, EquipmentRegistrationService>();
+builder.Services.AddScoped<IMeasurementService, MeasurementService>();
 builder.Services.AddScoped<IValidator<CreateEquipmentDto>, CreateEquipmentDtoValidator>();
+builder.Services.AddScoped<IValidator<CreateMeasurementDto>, CreateMeasurementDtoValidator>();
 builder.Services.AddScoped<IValidator<UpdateEquipmentDto>, UpdateEquipmentDtoValidator>();
 
 var app = builder.Build();
