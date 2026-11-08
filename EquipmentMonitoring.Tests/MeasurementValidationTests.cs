@@ -10,6 +10,8 @@ namespace EquipmentMonitoring.Tests;
 
 public class MeasurementValidationTests
 {
+    private static readonly Equipment ExistingEquipment = CreateEquipment();
+
     [Fact]
     public async Task Validator_Should_Reject_Missing_EquipmentId()
     {
@@ -314,7 +316,7 @@ public class MeasurementValidationTests
 
     private static CreateMeasurementDto CreateValidDto(Guid? equipmentId = null) => new()
     {
-        EquipmentId = equipmentId ?? Guid.NewGuid(),
+        EquipmentId = equipmentId ?? ExistingEquipment.Id,
         Type = MeasurementType.Temperature,
         Value = 20.5,
         Timestamp = null
@@ -328,7 +330,7 @@ public class MeasurementValidationTests
 
     private static Mock<IEquipmentRepository> CreateRepositoryWithExistingEquipment(Equipment? equipment = null)
     {
-        equipment ??= CreateEquipment();
+        equipment ??= ExistingEquipment;
         var repository = new Mock<IEquipmentRepository>();
         repository
             .Setup(item => item.GetByIdAsync(equipment.Id, It.IsAny<CancellationToken>()))
