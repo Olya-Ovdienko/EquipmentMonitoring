@@ -35,6 +35,7 @@ public class MeasurementApiTests
             cancellationToken);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Null(response.Headers.Location);
     }
 
     [Fact]

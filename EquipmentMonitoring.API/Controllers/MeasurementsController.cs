@@ -44,7 +44,7 @@ public sealed class MeasurementsController(IMeasurementService measurementServic
         try
         {
             var response = await measurementService.CreateAsync(request, cancellationToken);
-            return Created($"/api/v1/equipment/{response.EquipmentId}/measurements/{response.Id}", response);
+            return StatusCode(StatusCodes.Status201Created, response);
         }
         catch (ValidationException exception)
         {
