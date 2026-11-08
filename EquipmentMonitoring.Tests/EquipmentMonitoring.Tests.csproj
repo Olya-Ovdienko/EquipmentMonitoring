@@ -9,12 +9,14 @@
 
   <ItemGroup>
     <PackageReference Include="xunit.v3" Version="4.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\EquipmentMonitoring.Application\EquipmentMonitoring.Application.csproj" />
     <ProjectReference Include="..\EquipmentMonitoring.Domain\EquipmentMonitoring.Domain.csproj" />
     <ProjectReference Include="..\EquipmentMonitoring.Infrastructure\EquipmentMonitoring.Infrastructure.csproj" />
+    <ProjectReference Include="..\EquipmentMonitoring.API\EquipmentMonitoring.API.csproj" />
   </ItemGroup>
 
 </Project>
