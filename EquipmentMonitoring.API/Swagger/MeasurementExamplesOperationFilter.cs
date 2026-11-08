@@ -38,7 +38,7 @@ public sealed class MeasurementExamplesOperationFilter : IOperationFilter, ISche
                   "title": "One or more validation errors occurred.",
                   "status": 400,
                   "errors": {
-                    "Value": ["Value must be finite and non-negative for this measurement type."]
+                    "Value": ["Value must not be negative unless the measurement type is temperature."]
                   }
                 }
                 """);
