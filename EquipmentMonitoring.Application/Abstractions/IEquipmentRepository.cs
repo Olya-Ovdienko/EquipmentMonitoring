@@ -7,4 +7,6 @@ namespace EquipmentMonitoring.Application.Abstractions;
 public interface IEquipmentRepository
 {
     Task AddAsync(Equipment equipment, CancellationToken cancellationToken);
+
+    Task<Equipment?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
 }

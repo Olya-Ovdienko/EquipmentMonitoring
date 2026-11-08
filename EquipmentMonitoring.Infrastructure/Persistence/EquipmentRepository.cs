@@ -22,6 +22,13 @@ public sealed class EquipmentRepository(EquipmentDbContext dbContext) : IEquipme
         }
     }
 
+    public Task<Equipment?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+    {
+        return dbContext.Equipments
+            .AsNoTracking()
+            .SingleOrDefaultAsync(equipment => equipment.Id == id, cancellationToken);
+    }
+
     private static bool IsSerialNumberUniqueConstraintViolation(DbUpdateException exception)
     {
         return exception.InnerException is SqliteException
