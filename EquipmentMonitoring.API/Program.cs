@@ -25,6 +25,7 @@ builder.Services.AddSwaggerGen(options =>
     options.SchemaFilter<EquipmentExamplesOperationFilter>();
     options.OperationFilter<MeasurementExamplesOperationFilter>();
     options.SchemaFilter<MeasurementExamplesOperationFilter>();
+    options.OperationFilter<AlertExamplesOperationFilter>();
 });
 
 var connectionString = builder.Configuration.GetConnectionString("EquipmentDatabase")
@@ -38,6 +39,7 @@ builder.Services.AddScoped<IAlertRepository, AlertRepository>();
 builder.Services.AddScoped<IEquipmentRegistrationService, EquipmentRegistrationService>();
 builder.Services.AddScoped<IMeasurementService, MeasurementService>();
 builder.Services.AddScoped<IMeasurementAlertService, MeasurementAlertService>();
+builder.Services.AddScoped<IAlertService, AlertService>();
 builder.Services.AddScoped<IValidator<CreateEquipmentDto>, CreateEquipmentDtoValidator>();
 builder.Services.AddScoped<IValidator<CreateMeasurementDto>, CreateMeasurementDtoValidator>();
 builder.Services.AddScoped<IValidator<UpdateEquipmentDto>, UpdateEquipmentDtoValidator>();

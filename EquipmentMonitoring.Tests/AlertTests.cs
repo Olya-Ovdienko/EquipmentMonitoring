@@ -45,6 +45,27 @@ public class AlertTests
     }
 
     [Fact]
+    public void Alert_Acknowledge_Should_Set_IsAcknowledged_To_True()
+    {
+        var alert = CreateValidAlert();
+
+        alert.Acknowledge();
+
+        Assert.True(alert.IsAcknowledged);
+    }
+
+    [Fact]
+    public void Alert_Acknowledge_Should_Be_Idempotent()
+    {
+        var alert = CreateValidAlert();
+
+        alert.Acknowledge();
+        alert.Acknowledge();
+
+        Assert.True(alert.IsAcknowledged);
+    }
+
+    [Fact]
     public void Alert_Should_Reject_Empty_EquipmentId()
     {
         Assert.ThrowsAny<ArgumentException>(() =>

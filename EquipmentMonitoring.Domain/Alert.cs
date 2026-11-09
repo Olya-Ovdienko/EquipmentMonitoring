@@ -8,7 +8,7 @@ public class Alert
     public string Message { get; }
     public AlertSeverity Severity { get; }
     public DateTime Timestamp { get; }
-    public bool IsAcknowledged { get; }
+    public bool IsAcknowledged { get; private set; }
 
     public Alert(
         Guid equipmentId,
@@ -49,5 +49,10 @@ public class Alert
         Severity = severity;
         Timestamp = timestamp;
         IsAcknowledged = false;
+    }
+
+    public void Acknowledge()
+    {
+        IsAcknowledged = true;
     }
 }
