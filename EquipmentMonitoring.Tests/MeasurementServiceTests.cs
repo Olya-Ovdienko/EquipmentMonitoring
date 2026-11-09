@@ -367,12 +367,177 @@ public class MeasurementServiceTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task CreateAsync_SavesMeasurementBeforeEvaluatingAlerts()
+    {
+        var equipment = CreateEquipment();
+        var equipmentRepository = CreateEquipmentRepository(equipment);
+        var measurementRepository = CreateMeasurementRepository();
+        var alertService = new Mock<IMeasurementAlertService>();
+        var calls = new List<string>();
+        measurementRepository
+            .Setup(repository => repository.AddAsync(It.IsAny<Measurement>(), It.IsAny<CancellationToken>()))
+            .Callback<Measurement, CancellationToken>((_, _) => calls.Add("measurement"))
+            .Returns(Task.CompletedTask);
+        alertService
+            .Setup(service => service.EvaluateAndPersistAsync(
+                It.IsAny<Measurement>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<Measurement, CancellationToken>((_, _) => calls.Add("alerts"))
+            .Returns(Task.CompletedTask);
+        var service = CreateService(equipmentRepository.Object, measurementRepository.Object, alertService.Object);
+
+        await service.CreateAsync(CreateValidDto(equipment.Id), TestContext.Current.CancellationToken);
+
+        Assert.Equal(["measurement", "alerts"], calls);
+    }
+
+    [Fact]
+    public async Task CreateAsync_PassesNewMeasurementToAlertEvaluation()
+    {
+        var equipment = CreateEquipment();
+        var equipmentRepository = CreateEquipmentRepository(equipment);
+        var measurementRepository = CreateMeasurementRepository();
+        var alertService = new Mock<IMeasurementAlertService>();
+        Measurement? evaluatedMeasurement = null;
+        alertService
+            .Setup(service => service.EvaluateAndPersistAsync(
+                It.IsAny<Measurement>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<Measurement, CancellationToken>((measurement, _) => evaluatedMeasurement = measurement)
+            .Returns(Task.CompletedTask);
+        var service = CreateService(equipmentRepository.Object, measurementRepository.Object, alertService.Object);
+
+        await service.CreateAsync(CreateValidDto(equipment.Id), TestContext.Current.CancellationToken);
+
+        Assert.NotNull(evaluatedMeasurement);
+        Assert.Equal(equipment.Id, evaluatedMeasurement.EquipmentId);
+        Assert.Equal(MeasurementType.Voltage, evaluatedMeasurement.Type);
+        Assert.Equal(230.75, evaluatedMeasurement.Value);
+        Assert.Equal(Timestamp, evaluatedMeasurement.Timestamp);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ForwardsCancellationTokenToAlertEvaluation()
+    {
+        using var cancellationSource = new CancellationTokenSource();
+        var cancellationToken = cancellationSource.Token;
+        var equipment = CreateEquipment();
+        var equipmentRepository = CreateEquipmentRepository(equipment);
+        var measurementRepository = CreateMeasurementRepository();
+        var alertService = new Mock<IMeasurementAlertService>();
+        alertService
+            .Setup(service => service.EvaluateAndPersistAsync(It.IsAny<Measurement>(), cancellationToken))
+            .Returns(Task.CompletedTask);
+        var service = CreateService(equipmentRepository.Object, measurementRepository.Object, alertService.Object);
+
+        await service.CreateAsync(CreateValidDto(equipment.Id), cancellationToken);
+
+        alertService.Verify(
+            item => item.EvaluateAndPersistAsync(It.IsAny<Measurement>(), cancellationToken),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithAlertEvaluation_ReturnsTheUnchangedMeasurementResponse()
+    {
+        var equipment = CreateEquipment();
+        var equipmentRepository = CreateEquipmentRepository(equipment);
+        var measurementRepository = CreateMeasurementRepository();
+        measurementRepository
+            .Setup(repository => repository.AddAsync(It.IsAny<Measurement>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var alertService = new Mock<IMeasurementAlertService>();
+        var service = CreateService(equipmentRepository.Object, measurementRepository.Object, alertService.Object);
+        var dto = CreateValidDto(equipment.Id);
+
+        var response = await service.CreateAsync(dto, TestContext.Current.CancellationToken);
+
+        Assert.NotEqual(Guid.Empty, response.Id);
+        Assert.Equal(equipment.Id, response.EquipmentId);
+        Assert.Equal(nameof(MeasurementType.Voltage), response.Type);
+        Assert.Equal(dto.Value, response.Value);
+        Assert.Equal("V", response.Unit);
+        Assert.Equal(Timestamp, response.Timestamp);
+        Assert.Equal(DateTimeKind.Utc, response.Timestamp.Kind);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WhenValidationFails_DoesNotEvaluateAlerts()
+    {
+        var equipmentRepository = CreateEquipmentRepository(null);
+        var measurementRepository = CreateMeasurementRepository();
+        var alertService = new Mock<IMeasurementAlertService>();
+        var service = CreateService(equipmentRepository.Object, measurementRepository.Object, alertService.Object);
+
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            service.CreateAsync(CreateValidDto(Guid.Empty), TestContext.Current.CancellationToken));
+
+        alertService.Verify(
+            item => item.EvaluateAndPersistAsync(It.IsAny<Measurement>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WhenMeasurementRepositoryFails_DoesNotEvaluateAlerts()
+    {
+        var equipment = CreateEquipment();
+        var equipmentRepository = CreateEquipmentRepository(equipment);
+        var measurementRepository = CreateMeasurementRepository();
+        measurementRepository
+            .Setup(repository => repository.AddAsync(It.IsAny<Measurement>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Measurement persistence failed."));
+        var alertService = new Mock<IMeasurementAlertService>();
+        var service = CreateService(equipmentRepository.Object, measurementRepository.Object, alertService.Object);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.CreateAsync(CreateValidDto(equipment.Id), TestContext.Current.CancellationToken));
+
+        alertService.Verify(
+            item => item.EvaluateAndPersistAsync(It.IsAny<Measurement>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Theory]
+    [InlineData(DateTimeKind.Local)]
+    [InlineData(DateTimeKind.Unspecified)]
+    public async Task CreateAsync_WithNonUtcTimestamp_DoesNotSaveOrEvaluateAlerts(DateTimeKind kind)
+    {
+        var equipment = CreateEquipment();
+        var equipmentRepository = CreateEquipmentRepository(equipment);
+        var measurementRepository = CreateMeasurementRepository();
+        var alertService = new Mock<IMeasurementAlertService>();
+        var service = CreateService(equipmentRepository.Object, measurementRepository.Object, alertService.Object);
+        var dto = CreateValidDto(equipment.Id);
+        dto.Timestamp = DateTime.SpecifyKind(DateTime.UtcNow.AddMinutes(-1), kind);
+
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            service.CreateAsync(dto, TestContext.Current.CancellationToken));
+
+        measurementRepository.Verify(
+            repository => repository.AddAsync(It.IsAny<Measurement>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        alertService.Verify(
+            item => item.EvaluateAndPersistAsync(It.IsAny<Measurement>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private static MeasurementService CreateService(
         IEquipmentRepository equipmentRepository,
         IMeasurementRepository measurementRepository)
     {
         var validator = new CreateMeasurementDtoValidator(equipmentRepository);
-        return new MeasurementService(validator, equipmentRepository, measurementRepository);
+        var alertService = new Mock<IMeasurementAlertService>();
+        return new MeasurementService(validator, equipmentRepository, measurementRepository, alertService.Object);
+    }
+
+    private static MeasurementService CreateService(
+        IEquipmentRepository equipmentRepository,
+        IMeasurementRepository measurementRepository,
+        IMeasurementAlertService alertService)
+    {
+        var validator = new CreateMeasurementDtoValidator(equipmentRepository);
+        return new MeasurementService(validator, equipmentRepository, measurementRepository, alertService);
     }
 
     private static Mock<IEquipmentRepository> CreateEquipmentRepository(Equipment? equipment)
