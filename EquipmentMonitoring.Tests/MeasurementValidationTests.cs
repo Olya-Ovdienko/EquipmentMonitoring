@@ -279,6 +279,39 @@ public class MeasurementValidationTests
     }
 
     [Fact]
+    public async Task Validator_Should_Accept_Utc_Timestamp()
+    {
+        // Arrange
+        var repository = CreateRepositoryWithExistingEquipment();
+        var dto = CreateValidDto();
+        dto.Timestamp = DateTime.UtcNow.AddMinutes(-1);
+
+        // Act
+        var result = await ValidateAsync(dto, repository.Object);
+
+        // Assert
+        Assert.True(result.IsValid);
+        Assert.Equal(DateTimeKind.Utc, dto.Timestamp.Value.Kind);
+    }
+
+    [Theory]
+    [InlineData(DateTimeKind.Local)]
+    [InlineData(DateTimeKind.Unspecified)]
+    public async Task Validator_Should_Reject_NonUtc_Timestamp(DateTimeKind kind)
+    {
+        // Arrange
+        var repository = CreateRepositoryWithExistingEquipment();
+        var dto = CreateValidDto();
+        dto.Timestamp = DateTime.SpecifyKind(DateTime.UtcNow.AddMinutes(-1), kind);
+
+        // Act
+        var result = await ValidateAsync(dto, repository.Object);
+
+        // Assert
+        AssertFieldHasMessage(result, nameof(CreateMeasurementDto.Timestamp));
+    }
+
+    [Fact]
     public async Task Validator_Should_Reject_Future_Utc_Timestamp()
     {
         // Arrange

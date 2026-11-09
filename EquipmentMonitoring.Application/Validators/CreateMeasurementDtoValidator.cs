@@ -41,6 +41,9 @@ public class CreateMeasurementDtoValidator : AbstractValidator<CreateMeasurement
             .WithMessage("Value must not be negative unless the measurement type is temperature.");
 
         RuleFor(measurement => measurement.Timestamp)
+            .Cascade(CascadeMode.Stop)
+            .Must(timestamp => !timestamp.HasValue || timestamp.Value.Kind == DateTimeKind.Utc)
+            .WithMessage("Timestamp must be in UTC.")
             .Must(timestamp => !timestamp.HasValue || timestamp.Value <= DateTime.UtcNow)
             .WithMessage("Timestamp must not be in the future.");
     }

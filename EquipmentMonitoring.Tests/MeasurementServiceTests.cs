@@ -498,6 +498,30 @@ public class MeasurementServiceTests
             Times.Never);
     }
 
+    [Theory]
+    [InlineData(DateTimeKind.Local)]
+    [InlineData(DateTimeKind.Unspecified)]
+    public async Task CreateAsync_WithNonUtcTimestamp_DoesNotSaveOrEvaluateAlerts(DateTimeKind kind)
+    {
+        var equipment = CreateEquipment();
+        var equipmentRepository = CreateEquipmentRepository(equipment);
+        var measurementRepository = CreateMeasurementRepository();
+        var alertService = new Mock<IMeasurementAlertService>();
+        var service = CreateService(equipmentRepository.Object, measurementRepository.Object, alertService.Object);
+        var dto = CreateValidDto(equipment.Id);
+        dto.Timestamp = DateTime.SpecifyKind(DateTime.UtcNow.AddMinutes(-1), kind);
+
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            service.CreateAsync(dto, TestContext.Current.CancellationToken));
+
+        measurementRepository.Verify(
+            repository => repository.AddAsync(It.IsAny<Measurement>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        alertService.Verify(
+            item => item.EvaluateAndPersistAsync(It.IsAny<Measurement>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private static MeasurementService CreateService(
         IEquipmentRepository equipmentRepository,
         IMeasurementRepository measurementRepository)
