@@ -11,7 +11,8 @@ namespace EquipmentMonitoring.Application.Services;
 public sealed class MeasurementService(
     IValidator<CreateMeasurementDto> validator,
     IEquipmentRepository equipmentRepository,
-    IMeasurementRepository measurementRepository) : IMeasurementService
+    IMeasurementRepository measurementRepository,
+    IMeasurementAlertService measurementAlertService) : IMeasurementService
 {
     public async Task<MeasurementResponseDto> CreateAsync(
         CreateMeasurementDto dto,
@@ -25,6 +26,7 @@ public sealed class MeasurementService(
 
         var measurement = MeasurementMapper.ToDomain(dto);
         await measurementRepository.AddAsync(measurement, cancellationToken);
+        await measurementAlertService.EvaluateAndPersistAsync(measurement, cancellationToken);
 
         return MeasurementMapper.ToResponse(measurement);
     }
