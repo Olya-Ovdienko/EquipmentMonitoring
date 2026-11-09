@@ -1,3 +1,4 @@
+using System.Globalization;
 using EquipmentMonitoring.Application.Abstractions;
 using EquipmentMonitoring.Application.Services;
 using EquipmentMonitoring.Domain;
@@ -31,10 +32,13 @@ public class MeasurementAlertServiceTests
     [Fact]
     public async Task EvaluateAndPersistAsync_WithValueAboveMaxValue_CreatesAlertWithSeverityAndMessage()
     {
-        var measurement = CreateMeasurement(95.0);
-        var threshold = CreateThreshold(measurement, 10.0, 90.0, AlertSeverity.Critical);
+        // Arrange
+        var measurement = CreateMeasurement(95.5);
+        var threshold = CreateThreshold(measurement, 10.0, 90.25, AlertSeverity.Critical);
         var thresholdRepository = CreateThresholdRepository(threshold);
         var alertRepository = CreateAlertRepository();
+        var expectedMessage = $"Temperature value {measurement.Value.ToString(CultureInfo.InvariantCulture)} "
+            + $"is above maximum threshold {90.25.ToString(CultureInfo.InvariantCulture)}.";
         IReadOnlyCollection<Alert>? savedAlerts = null;
         alertRepository
             .Setup(repository => repository.AddRangeAsync(
@@ -44,18 +48,24 @@ public class MeasurementAlertServiceTests
             .Returns(Task.CompletedTask);
         var service = CreateService(thresholdRepository.Object, alertRepository.Object);
 
+        // Act
         await service.EvaluateAndPersistAsync(measurement, TestContext.Current.CancellationToken);
 
+        // Assert
         var alert = Assert.Single(savedAlerts!);
+        Assert.Equal(measurement.EquipmentId, alert.EquipmentId);
+        Assert.Equal(measurement.Id, alert.MeasurementId);
         Assert.Equal(AlertSeverity.Critical, alert.Severity);
-        Assert.Contains("maximum", alert.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("95", alert.Message);
-        Assert.Contains("90", alert.Message);
+        Assert.Equal(expectedMessage, alert.Message);
+        Assert.Equal(measurement.Timestamp, alert.Timestamp);
+        Assert.Equal(DateTimeKind.Utc, alert.Timestamp.Kind);
+        Assert.False(alert.IsAcknowledged);
     }
 
     [Fact]
     public async Task EvaluateAndPersistAsync_WithValueBelowMinValue_CreatesAlertWithSeverityAndMessage()
     {
+        // Arrange
         var measurement = CreateMeasurement(5.0);
         var threshold = CreateThreshold(measurement, 10.0, 90.0, AlertSeverity.Warning);
         var thresholdRepository = CreateThresholdRepository(threshold);
@@ -69,13 +79,18 @@ public class MeasurementAlertServiceTests
             .Returns(Task.CompletedTask);
         var service = CreateService(thresholdRepository.Object, alertRepository.Object);
 
+        // Act
         await service.EvaluateAndPersistAsync(measurement, TestContext.Current.CancellationToken);
 
+        // Assert
         var alert = Assert.Single(savedAlerts!);
+        Assert.Equal(measurement.EquipmentId, alert.EquipmentId);
+        Assert.Equal(measurement.Id, alert.MeasurementId);
         Assert.Equal(AlertSeverity.Warning, alert.Severity);
-        Assert.Contains("minimum", alert.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("5", alert.Message);
-        Assert.Contains("10", alert.Message);
+        Assert.Equal("Temperature value 5 is below minimum threshold 10.", alert.Message);
+        Assert.Equal(measurement.Timestamp, alert.Timestamp);
+        Assert.Equal(DateTimeKind.Utc, alert.Timestamp.Kind);
+        Assert.False(alert.IsAcknowledged);
     }
 
     [Fact]
@@ -163,14 +178,27 @@ public class MeasurementAlertServiceTests
     [Fact]
     public async Task EvaluateAndPersistAsync_WithOnlyMinValue_UsesLowerBoundary()
     {
+        // Arrange
         var measurement = CreateMeasurement(5.0);
         var thresholdRepository = CreateThresholdRepository(
             CreateThreshold(measurement, 10.0, null, AlertSeverity.Warning));
         var alertRepository = CreateAlertRepository();
+        IReadOnlyCollection<Alert>? savedAlerts = null;
+        alertRepository
+            .Setup(repository => repository.AddRangeAsync(
+                It.IsAny<IReadOnlyCollection<Alert>>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<IReadOnlyCollection<Alert>, CancellationToken>((alerts, _) => savedAlerts = alerts)
+            .Returns(Task.CompletedTask);
         var service = CreateService(thresholdRepository.Object, alertRepository.Object);
 
+        // Act
         await service.EvaluateAndPersistAsync(measurement, TestContext.Current.CancellationToken);
 
+        // Assert
+        var alert = Assert.Single(savedAlerts!);
+        Assert.Equal(AlertSeverity.Warning, alert.Severity);
+        Assert.Equal("Temperature value 5 is below minimum threshold 10.", alert.Message);
         alertRepository.Verify(
             repository => repository.AddRangeAsync(
                 It.IsAny<IReadOnlyCollection<Alert>>(),
@@ -181,14 +209,111 @@ public class MeasurementAlertServiceTests
     [Fact]
     public async Task EvaluateAndPersistAsync_WithOnlyMaxValue_UsesUpperBoundary()
     {
+        // Arrange
         var measurement = CreateMeasurement(95.0);
+        var thresholdRepository = CreateThresholdRepository(
+            CreateThreshold(measurement, null, 90.0, AlertSeverity.Warning));
+        var alertRepository = CreateAlertRepository();
+        IReadOnlyCollection<Alert>? savedAlerts = null;
+        alertRepository
+            .Setup(repository => repository.AddRangeAsync(
+                It.IsAny<IReadOnlyCollection<Alert>>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<IReadOnlyCollection<Alert>, CancellationToken>((alerts, _) => savedAlerts = alerts)
+            .Returns(Task.CompletedTask);
+        var service = CreateService(thresholdRepository.Object, alertRepository.Object);
+
+        // Act
+        await service.EvaluateAndPersistAsync(measurement, TestContext.Current.CancellationToken);
+
+        // Assert
+        var alert = Assert.Single(savedAlerts!);
+        Assert.Equal(AlertSeverity.Warning, alert.Severity);
+        Assert.Equal("Temperature value 95 is above maximum threshold 90.", alert.Message);
+        alertRepository.Verify(
+            repository => repository.AddRangeAsync(
+                It.IsAny<IReadOnlyCollection<Alert>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Theory]
+    [InlineData(10.0)]
+    [InlineData(50.0)]
+    public async Task EvaluateAndPersistAsync_WithValueAtOrAboveOnlyMinValue_DoesNotSaveAlert(
+        double value)
+    {
+        // Arrange
+        var measurement = CreateMeasurement(value);
+        var thresholdRepository = CreateThresholdRepository(
+            CreateThreshold(measurement, 10.0, null, AlertSeverity.Warning));
+        var alertRepository = CreateAlertRepository();
+        var service = CreateService(thresholdRepository.Object, alertRepository.Object);
+
+        // Act
+        await service.EvaluateAndPersistAsync(measurement, TestContext.Current.CancellationToken);
+
+        // Assert
+        alertRepository.Verify(
+            repository => repository.AddRangeAsync(
+                It.IsAny<IReadOnlyCollection<Alert>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Theory]
+    [InlineData(90.0)]
+    [InlineData(50.0)]
+    public async Task EvaluateAndPersistAsync_WithValueAtOrBelowOnlyMaxValue_DoesNotSaveAlert(
+        double value)
+    {
+        // Arrange
+        var measurement = CreateMeasurement(value);
         var thresholdRepository = CreateThresholdRepository(
             CreateThreshold(measurement, null, 90.0, AlertSeverity.Warning));
         var alertRepository = CreateAlertRepository();
         var service = CreateService(thresholdRepository.Object, alertRepository.Object);
 
+        // Act
         await service.EvaluateAndPersistAsync(measurement, TestContext.Current.CancellationToken);
 
+        // Assert
+        alertRepository.Verify(
+            repository => repository.AddRangeAsync(
+                It.IsAny<IReadOnlyCollection<Alert>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task EvaluateAndPersistAsync_WithWarningAndCriticalMinimumViolations_SavesTwoAlertsInOneBatch()
+    {
+        // Arrange
+        var measurement = CreateMeasurement(5.0);
+        var warningThreshold = CreateThreshold(measurement, 10.0, 90.0, AlertSeverity.Warning);
+        var criticalThreshold = CreateThreshold(measurement, 20.0, 80.0, AlertSeverity.Critical);
+        var thresholdRepository = CreateThresholdRepository(warningThreshold, criticalThreshold);
+        var alertRepository = CreateAlertRepository();
+        IReadOnlyCollection<Alert>? savedAlerts = null;
+        alertRepository
+            .Setup(repository => repository.AddRangeAsync(
+                It.IsAny<IReadOnlyCollection<Alert>>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<IReadOnlyCollection<Alert>, CancellationToken>((alerts, _) => savedAlerts = alerts)
+            .Returns(Task.CompletedTask);
+        var service = CreateService(thresholdRepository.Object, alertRepository.Object);
+
+        // Act
+        await service.EvaluateAndPersistAsync(measurement, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(2, savedAlerts!.Count);
+        Assert.Contains(savedAlerts, alert =>
+            alert.Severity == AlertSeverity.Warning
+            && alert.Message == "Temperature value 5 is below minimum threshold 10.");
+        Assert.Contains(savedAlerts, alert =>
+            alert.Severity == AlertSeverity.Critical
+            && alert.Message == "Temperature value 5 is below minimum threshold 20.");
         alertRepository.Verify(
             repository => repository.AddRangeAsync(
                 It.IsAny<IReadOnlyCollection<Alert>>(),
