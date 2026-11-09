@@ -17,6 +17,41 @@ namespace EquipmentMonitoring.Infrastructure.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.14");
 
+            modelBuilder.Entity("EquipmentMonitoring.Domain.Alert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("EquipmentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsAcknowledged")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("MeasurementId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Severity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("Timestamp")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MeasurementId");
+
+                    b.HasIndex("EquipmentId", "IsAcknowledged");
+
+                    b.HasIndex("EquipmentId", "Timestamp");
+
+                    b.ToTable("Alerts", (string)null);
+                });
+
             modelBuilder.Entity("EquipmentMonitoring.Domain.Equipment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -81,12 +116,64 @@ namespace EquipmentMonitoring.Infrastructure.Persistence.Migrations
                     b.ToTable("Measurements", (string)null);
                 });
 
+            modelBuilder.Entity("EquipmentMonitoring.Domain.Threshold", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("EquipmentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("MaxValue")
+                        .HasColumnType("REAL");
+
+                    b.Property<int>("MeasurementType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("MinValue")
+                        .HasColumnType("REAL");
+
+                    b.Property<int>("Severity")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EquipmentId", "MeasurementType", "Severity")
+                        .IsUnique();
+
+                    b.ToTable("Thresholds", (string)null);
+                });
+
+            modelBuilder.Entity("EquipmentMonitoring.Domain.Alert", b =>
+                {
+                    b.HasOne("EquipmentMonitoring.Domain.Equipment", null)
+                        .WithMany()
+                        .HasForeignKey("EquipmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("EquipmentMonitoring.Domain.Measurement", null)
+                        .WithMany()
+                        .HasForeignKey("MeasurementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("EquipmentMonitoring.Domain.Measurement", b =>
                 {
                     b.HasOne("EquipmentMonitoring.Domain.Equipment", null)
                         .WithMany()
                         .HasForeignKey("EquipmentId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("EquipmentMonitoring.Domain.Threshold", b =>
+                {
+                    b.HasOne("EquipmentMonitoring.Domain.Equipment", null)
+                        .WithMany()
+                        .HasForeignKey("EquipmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 #pragma warning restore 612, 618
