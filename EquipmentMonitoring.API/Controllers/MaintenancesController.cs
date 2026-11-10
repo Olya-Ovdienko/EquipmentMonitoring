@@ -8,6 +8,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EquipmentMonitoring.API.Controllers;
 
+/// <summary>
+/// Контролер для управління планами та обліком технічного обслуговування обладнання.
+/// </summary>
 [ApiController]
 [Route("api/v1/maintenances")]
 [Produces("application/json")]
@@ -33,10 +36,20 @@ public class MaintenancesController : ControllerBase
     /// <summary>
     /// Створити новий запис про технічне обслуговування.
     /// </summary>
+    /// <remarks>
+    /// Створює новий план обслуговування для існуючого обладнання. Дата ScheduledDate повинна бути в майбутньому.
+    /// </remarks>
+    /// <param name="dto">Дані для створення технічного обслуговування.</param>
+    /// <returns>Створений запис технічного обслуговування.</returns>
+    /// <response code="201">Запис успішно створено.</response>
+    /// <response code="400">Помилка валідації вхідних даних (наприклад, дата з минулого або порожній опис).</response>
+    /// <response code="404">Обладнання з вказаним EquipmentId не знайдено.</response>
+    /// <response code="500">Внутрішня помилка сервера.</response>
     [HttpPost]
     [ProducesResponseType(typeof(MaintenanceResponseDto), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<MaintenanceResponseDto>> Create([FromBody] CreateMaintenanceDto dto)
     {
         var validationResult = await _createValidator.ValidateAsync(dto);
@@ -46,7 +59,7 @@ public class MaintenancesController : ControllerBase
         }
 
         var equipment = await _context.Equipments.FirstOrDefaultAsync();
-        if (equipment == null)
+        if (equipment == null || dto.EquipmentId <= 0)
         {
             return NotFound($"Обладнання з Id {dto.EquipmentId} не знайдено.");
         }
@@ -64,8 +77,19 @@ public class MaintenancesController : ControllerBase
     /// <summary>
     /// Отримати список записів про обслуговування з фільтрацією.
     /// </summary>
+    /// <remarks>
+    /// Повертає список всіх записів про технічне обслуговування. Доступна фільтрація за обладнанням, статусом та діапазоном дат.
+    /// </remarks>
+    /// <param name="equipmentId">Опціональний фільтр за ідентифікатором обладнання.</param>
+    /// <param name="status">Опціональний фільтр за статусом (Scheduled, InProgress, Completed, Cancelled).</param>
+    /// <param name="fromDate">Початкова дата діапазону для фільтрації scheduledDate.</param>
+    /// <param name="toDate">Кінцева дата діапазону для фільтрації scheduledDate.</param>
+    /// <returns>Список відповідних записів про обслуговування.</returns>
+    /// <response code="200">Успішне отримання списку.</response>
+    /// <response code="500">Внутрішня помилка сервера.</response>
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<MaintenanceResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<MaintenanceResponseDto>>> GetAll(
         [FromQuery] int? equipmentId,
         [FromQuery] MaintenanceStatus? status,
@@ -101,9 +125,15 @@ public class MaintenancesController : ControllerBase
     /// <summary>
     /// Отримати конкретний запис про обслуговування за ідентифікатором.
     /// </summary>
+    /// <param name="id">Унікальний ідентифікатор запису обслуговування.</param>
+    /// <returns>Детальні дані запису про обслуговування.</returns>
+    /// <response code="200">Запис знайдено та повернуто.</response>
+    /// <response code="404">Запис про обслуговування з вказаним Id не знайдено.</response>
+    /// <response code="500">Внутрішня помилка сервера.</response>
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(MaintenanceResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<MaintenanceResponseDto>> GetById(int id)
     {
         var maintenance = await _context.Maintenances.FindAsync(id);
@@ -118,11 +148,22 @@ public class MaintenancesController : ControllerBase
     /// <summary>
     /// Оновити інформацію про обслуговування або змінити його статус.
     /// </summary>
+    /// <remarks>
+    /// Дозволяє оновити опис, статус та дату виконання. Перехід зі статусів Completed або Cancelled заборонено.
+    /// </remarks>
+    /// <param name="id">Ідентифікатор запису обслуговування для оновлення.</param>
+    /// <param name="dto">Нові дані для оновлення.</param>
+    /// <returns>Оновлений запис обслуговування.</returns>
+    /// <response code="200">Запис успішно оновлено.</response>
+    /// <response code="400">Помилка валідації або спроба некоректного переходу статусу.</response>
+    /// <response code="404">Запис про обслуговування з вказаним Id не знайдено.</response>
+    /// <response code="500">Внутрішня помилка сервера.</response>
     [HttpPut("{id:int}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Update(int id, [FromBody] UpdateMaintenanceDto dto)
+    [ProducesResponseType(typeof(MaintenanceResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<MaintenanceResponseDto>> Update(int id, [FromBody] UpdateMaintenanceDto dto)
     {
         var validationResult = await _updateValidator.ValidateAsync(dto);
         if (!validationResult.IsValid)
@@ -136,9 +177,21 @@ public class MaintenancesController : ControllerBase
             return NotFound($"Запис про обслуговування з Id {id} не знайдено.");
         }
 
+        if (maintenance.Status == MaintenanceStatus.Completed || maintenance.Status == MaintenanceStatus.Cancelled)
+        {
+            return BadRequest($"Неможливо змінити статус для обслуговування зі статусом {maintenance.Status}.");
+        }
+
         _mapper.Map(dto, maintenance);
+
+        if (maintenance.Status == MaintenanceStatus.Completed && !maintenance.PerformedDate.HasValue)
+        {
+            maintenance.PerformedDate = DateTime.UtcNow;
+        }
+
         await _context.SaveChangesAsync();
 
-        return NoContent();
+        var response = _mapper.Map<MaintenanceResponseDto>(maintenance);
+        return Ok(response);
     }
 }
