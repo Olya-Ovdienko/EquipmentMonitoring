@@ -45,8 +45,9 @@ public class MaintenancesController : ControllerBase
             return BadRequest(validationResult.ToDictionary());
         }
 
+        // Шукаємо обладнання у базі
         var equipment = await _context.Equipments.FirstOrDefaultAsync();
-        if (equipment == null)
+        if (equipment == null || dto.EquipmentId <= 0)
         {
             return NotFound($"Обладнання з Id {dto.EquipmentId} не знайдено.");
         }
@@ -119,10 +120,10 @@ public class MaintenancesController : ControllerBase
     /// Оновити інформацію про обслуговування або змінити його статус.
     /// </summary>
     [HttpPut("{id:int}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(MaintenanceResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Update(int id, [FromBody] UpdateMaintenanceDto dto)
+    public async Task<ActionResult<MaintenanceResponseDto>> Update(int id, [FromBody] UpdateMaintenanceDto dto)
     {
         var validationResult = await _updateValidator.ValidateAsync(dto);
         if (!validationResult.IsValid)
@@ -136,9 +137,21 @@ public class MaintenancesController : ControllerBase
             return NotFound($"Запис про обслуговування з Id {id} не знайдено.");
         }
 
+        if (maintenance.Status == MaintenanceStatus.Completed || maintenance.Status == MaintenanceStatus.Cancelled)
+        {
+            return BadRequest($"Неможливо змінити статус для обслуговування зі статусом {maintenance.Status}.");
+        }
+
         _mapper.Map(dto, maintenance);
+
+        if (maintenance.Status == MaintenanceStatus.Completed && !maintenance.PerformedDate.HasValue)
+        {
+            maintenance.PerformedDate = DateTime.UtcNow;
+        }
+
         await _context.SaveChangesAsync();
 
-        return NoContent();
+        var response = _mapper.Map<MaintenanceResponseDto>(maintenance);
+        return Ok(response);
     }
 }
