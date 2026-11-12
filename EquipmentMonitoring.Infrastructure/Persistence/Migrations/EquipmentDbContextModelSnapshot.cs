@@ -88,6 +88,38 @@ namespace EquipmentMonitoring.Infrastructure.Persistence.Migrations
                     b.ToTable("Equipments");
                 });
 
+            modelBuilder.Entity("EquipmentMonitoring.Domain.Maintenance", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EquipmentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("EquipmentId1")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("PerformedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ScheduledDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EquipmentId1");
+
+                    b.ToTable("Maintenances");
+                });
+
             modelBuilder.Entity("EquipmentMonitoring.Domain.Measurement", b =>
                 {
                     b.Property<Guid>("Id")
@@ -157,6 +189,17 @@ namespace EquipmentMonitoring.Infrastructure.Persistence.Migrations
                         .HasForeignKey("MeasurementId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("EquipmentMonitoring.Domain.Maintenance", b =>
+                {
+                    b.HasOne("EquipmentMonitoring.Domain.Equipment", "Equipment")
+                        .WithMany()
+                        .HasForeignKey("EquipmentId1")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Equipment");
                 });
 
             modelBuilder.Entity("EquipmentMonitoring.Domain.Measurement", b =>

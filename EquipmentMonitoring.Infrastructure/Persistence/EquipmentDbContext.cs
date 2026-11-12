@@ -9,7 +9,7 @@ public class EquipmentDbContext(DbContextOptions<EquipmentDbContext> options) : 
     public DbSet<Measurement> Measurements => Set<Measurement>();
     public DbSet<Threshold> Thresholds => Set<Threshold>();
     public DbSet<Alert> Alerts => Set<Alert>();
-
+    public DbSet<Maintenance> Maintenances => Set<Maintenance>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new EquipmentConfiguration());
