@@ -16,7 +16,7 @@ public class MaintenanceValidatorTests
         // Arrange
         var dto = new CreateMaintenanceDto
         {
-            EquipmentId = 1,
+            EquipmentId = Guid.NewGuid(),
             ScheduledDate = DateTime.UtcNow.AddDays(1),
             Description = "Планове технічне обслуговування"
         };
@@ -34,7 +34,7 @@ public class MaintenanceValidatorTests
         // Arrange
         var dto = new CreateMaintenanceDto
         {
-            EquipmentId = 1,
+            EquipmentId = Guid.NewGuid(),
             ScheduledDate = DateTime.UtcNow.AddDays(-2),
             Description = "Тест"
         };
@@ -53,7 +53,7 @@ public class MaintenanceValidatorTests
         // Arrange
         var dto = new CreateMaintenanceDto
         {
-            EquipmentId = 0,
+            EquipmentId = Guid.Empty,
             ScheduledDate = DateTime.UtcNow.AddDays(1),
             Description = "Тест"
         };
@@ -72,7 +72,7 @@ public class MaintenanceValidatorTests
         // Arrange
         var dto = new CreateMaintenanceDto
         {
-            EquipmentId = 1,
+            EquipmentId = Guid.NewGuid(),
             ScheduledDate = DateTime.UtcNow.AddDays(1),
             Description = string.Empty
         };

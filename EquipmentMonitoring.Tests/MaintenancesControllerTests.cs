@@ -51,6 +51,7 @@ public class MaintenancesControllerTests
     {
         // Arrange
         var context = GetDbContext(seedEquipment: true);
+        var equipmentId = context.Equipments.First().Id;
         var controller = new MaintenancesController(
             context,
             GetMapper(),
@@ -59,7 +60,7 @@ public class MaintenancesControllerTests
 
         var dto = new CreateMaintenanceDto
         {
-            EquipmentId = 1,
+            EquipmentId = equipmentId,
             ScheduledDate = DateTime.UtcNow.AddDays(1),
             Description = "Планова діагностика"
         };
@@ -85,7 +86,7 @@ public class MaintenancesControllerTests
 
         var dto = new CreateMaintenanceDto
         {
-            EquipmentId = 999,
+            EquipmentId = Guid.NewGuid(),
             ScheduledDate = DateTime.UtcNow.AddDays(1),
             Description = "Тест"
         };
@@ -102,6 +103,7 @@ public class MaintenancesControllerTests
     {
         // Arrange
         var context = GetDbContext(seedEquipment: true);
+        var equipmentId = context.Equipments.First().Id;
         var controller = new MaintenancesController(
             context,
             GetMapper(),
@@ -110,7 +112,7 @@ public class MaintenancesControllerTests
 
         var createDto = new CreateMaintenanceDto
         {
-            EquipmentId = 1,
+            EquipmentId = equipmentId,
             ScheduledDate = DateTime.UtcNow.AddDays(1),
             Description = "Заміна деталі"
         };
@@ -140,6 +142,7 @@ public class MaintenancesControllerTests
     {
         // Arrange
         var context = GetDbContext(seedEquipment: true);
+        var equipmentId = context.Equipments.First().Id;
         var controller = new MaintenancesController(
             context,
             GetMapper(),
@@ -148,7 +151,7 @@ public class MaintenancesControllerTests
 
         var createDto = new CreateMaintenanceDto
         {
-            EquipmentId = 1,
+            EquipmentId = equipmentId,
             ScheduledDate = DateTime.UtcNow.AddDays(1),
             Description = "Перевірка вузлів"
         };
@@ -182,6 +185,7 @@ public class MaintenancesControllerTests
     {
         // Arrange
         var context = GetDbContext(seedEquipment: true);
+        var equipmentId = context.Equipments.First().Id;
         var controller = new MaintenancesController(
             context,
             GetMapper(),
@@ -190,14 +194,14 @@ public class MaintenancesControllerTests
 
         var createDto = new CreateMaintenanceDto
         {
-            EquipmentId = 1,
-            ScheduledDate = DateTime.UtcNow,
+            EquipmentId = equipmentId,
+            ScheduledDate = DateTime.UtcNow.AddDays(1),
             Description = "Тестове обслуговування"
         };
         await controller.Create(createDto);
 
         // Act
-        var result = await controller.GetAll(equipmentId: 1, status: MaintenanceStatus.Scheduled, fromDate: null, toDate: null);
+        var result = await controller.GetAll(equipmentId: equipmentId, status: MaintenanceStatus.Scheduled, fromDate: null, toDate: null);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result.Result);

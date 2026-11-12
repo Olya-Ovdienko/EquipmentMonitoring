@@ -46,10 +46,10 @@ public class MaintenancesController : ControllerBase
         }
 
         // Шукаємо обладнання у базі
-        var equipment = await _context.Equipments.FirstOrDefaultAsync();
-        if (equipment == null || dto.EquipmentId <= 0)
+        var equipment = await _context.Equipments.FirstOrDefaultAsync(e => e.Id == dto.EquipmentId);
+        if (equipment == null || dto.EquipmentId == Guid.Empty)
         {
-            return NotFound($"Обладнання з Id {dto.EquipmentId} не знайдено.");
+            return NotFound($"Equipment with Id {dto.EquipmentId} not found.");
         }
 
         var maintenance = _mapper.Map<Maintenance>(dto);
@@ -68,10 +68,10 @@ public class MaintenancesController : ControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<MaintenanceResponseDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<MaintenanceResponseDto>>> GetAll(
-        [FromQuery] int? equipmentId,
-        [FromQuery] MaintenanceStatus? status,
-        [FromQuery] DateTime? fromDate,
-        [FromQuery] DateTime? toDate)
+    [FromQuery] Guid? equipmentId,
+    [FromQuery] MaintenanceStatus? status,
+    [FromQuery] DateTime? fromDate,
+    [FromQuery] DateTime? toDate)
     {
         var query = _context.Maintenances.AsQueryable();
 
