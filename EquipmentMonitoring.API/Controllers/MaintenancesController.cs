@@ -8,6 +8,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EquipmentMonitoring.API.Controllers;
 
+/// <summary>
+/// Controller for managing equipment maintenance scheduling and logging.
+/// </summary>
 [ApiController]
 [Route("api/v1/maintenances")]
 [Produces("application/json")]
@@ -31,12 +34,22 @@ public class MaintenancesController : ControllerBase
     }
 
     /// <summary>
-    /// Створити новий запис про технічне обслуговування.
+    /// Create a new maintenance record.
     /// </summary>
+    /// <remarks>
+    /// Creates a new maintenance schedule for existing equipment. ScheduledDate must be in the future.
+    /// </remarks>
+    /// <param name="dto">Data for creating a maintenance record.</param>
+    /// <returns>Created maintenance record.</returns>
+    /// <response code="201">Maintenance record successfully created.</response>
+    /// <response code="400">Input validation error (e.g. past date or empty description).</response>
+    /// <response code="404">Equipment with specified EquipmentId not found.</response>
+    /// <response code="500">Internal server error.</response>
     [HttpPost]
     [ProducesResponseType(typeof(MaintenanceResponseDto), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<MaintenanceResponseDto>> Create([FromBody] CreateMaintenanceDto dto)
     {
         var validationResult = await _createValidator.ValidateAsync(dto);
@@ -45,7 +58,6 @@ public class MaintenancesController : ControllerBase
             return BadRequest(validationResult.ToDictionary());
         }
 
-        // Шукаємо обладнання у базі
         var equipment = await _context.Equipments.FirstOrDefaultAsync(e => e.Id == dto.EquipmentId);
         if (equipment == null || dto.EquipmentId == Guid.Empty)
         {
@@ -63,15 +75,26 @@ public class MaintenancesController : ControllerBase
     }
 
     /// <summary>
-    /// Отримати список записів про обслуговування з фільтрацією.
+    /// Get list of maintenance records with optional filtering.
     /// </summary>
+    /// <remarks>
+    /// Returns a list of all maintenance records. Supports filtering by equipment, status, and date range.
+    /// </remarks>
+    /// <param name="equipmentId">Optional filter by equipment ID.</param>
+    /// <param name="status">Optional filter by status (Scheduled, InProgress, Completed, Cancelled).</param>
+    /// <param name="fromDate">Start date for filtering scheduledDate.</param>
+    /// <param name="toDate">End date for filtering scheduledDate.</param>
+    /// <returns>List of matching maintenance records.</returns>
+    /// <response code="200">Successfully retrieved list.</response>
+    /// <response code="500">Internal server error.</response>
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<MaintenanceResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<MaintenanceResponseDto>>> GetAll(
-    [FromQuery] Guid? equipmentId,
-    [FromQuery] MaintenanceStatus? status,
-    [FromQuery] DateTime? fromDate,
-    [FromQuery] DateTime? toDate)
+        [FromQuery] Guid? equipmentId,
+        [FromQuery] MaintenanceStatus? status,
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate)
     {
         var query = _context.Maintenances.AsQueryable();
 
@@ -100,29 +123,46 @@ public class MaintenancesController : ControllerBase
     }
 
     /// <summary>
-    /// Отримати конкретний запис про обслуговування за ідентифікатором.
+    /// Get specific maintenance record by identifier.
     /// </summary>
+    /// <param name="id">Unique identifier of the maintenance record.</param>
+    /// <returns>Detailed maintenance record data.</returns>
+    /// <response code="200">Record found and returned.</response>
+    /// <response code="404">Maintenance record with specified Id not found.</response>
+    /// <response code="500">Internal server error.</response>
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(MaintenanceResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<MaintenanceResponseDto>> GetById(int id)
     {
         var maintenance = await _context.Maintenances.FindAsync(id);
         if (maintenance == null)
         {
-            return NotFound($"Запис про обслуговування з Id {id} не знайдено.");
+            return NotFound($"Maintenance record with Id {id} not found.");
         }
 
         return Ok(_mapper.Map<MaintenanceResponseDto>(maintenance));
     }
 
     /// <summary>
-    /// Оновити інформацію про обслуговування або змінити його статус.
+    /// Update maintenance information or change its status.
     /// </summary>
+    /// <remarks>
+    /// Updates description, status, and performed date. Transitioning from Completed or Cancelled status is restricted.
+    /// </remarks>
+    /// <param name="id">Identifier of the maintenance record to update.</param>
+    /// <param name="dto">New data for update.</param>
+    /// <returns>Updated maintenance record.</returns>
+    /// <response code="200">Record successfully updated.</response>
+    /// <response code="400">Validation error or invalid status transition.</response>
+    /// <response code="404">Maintenance record with specified Id not found.</response>
+    /// <response code="500">Internal server error.</response>
     [HttpPut("{id:int}")]
     [ProducesResponseType(typeof(MaintenanceResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<MaintenanceResponseDto>> Update(int id, [FromBody] UpdateMaintenanceDto dto)
     {
         var validationResult = await _updateValidator.ValidateAsync(dto);
@@ -134,12 +174,12 @@ public class MaintenancesController : ControllerBase
         var maintenance = await _context.Maintenances.FindAsync(id);
         if (maintenance == null)
         {
-            return NotFound($"Запис про обслуговування з Id {id} не знайдено.");
+            return NotFound($"Maintenance record with Id {id} not found.");
         }
 
         if (maintenance.Status == MaintenanceStatus.Completed || maintenance.Status == MaintenanceStatus.Cancelled)
         {
-            return BadRequest($"Неможливо змінити статус для обслуговування зі статусом {maintenance.Status}.");
+            return BadRequest($"Cannot change status for maintenance with status {maintenance.Status}.");
         }
 
         _mapper.Map(dto, maintenance);
