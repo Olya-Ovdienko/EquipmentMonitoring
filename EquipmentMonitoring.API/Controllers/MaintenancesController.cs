@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace EquipmentMonitoring.API.Controllers;
 
 /// <summary>
-/// Контролер для управління планами та обліком технічного обслуговування обладнання.
+/// Controller for managing equipment maintenance scheduling and logging.
 /// </summary>
 [ApiController]
 [Route("api/v1/maintenances")]
@@ -34,17 +34,17 @@ public class MaintenancesController : ControllerBase
     }
 
     /// <summary>
-    /// Створити новий запис про технічне обслуговування.
+    /// Create a new maintenance record.
     /// </summary>
     /// <remarks>
-    /// Створює новий план обслуговування для існуючого обладнання. Дата ScheduledDate повинна бути в майбутньому.
+    /// Creates a new maintenance schedule for existing equipment. ScheduledDate must be in the future.
     /// </remarks>
-    /// <param name="dto">Дані для створення технічного обслуговування.</param>
-    /// <returns>Створений запис технічного обслуговування.</returns>
-    /// <response code="201">Запис успішно створено.</response>
-    /// <response code="400">Помилка валідації вхідних даних (наприклад, дата з минулого або порожній опис).</response>
-    /// <response code="404">Обладнання з вказаним EquipmentId не знайдено.</response>
-    /// <response code="500">Внутрішня помилка сервера.</response>
+    /// <param name="dto">Data for creating a maintenance record.</param>
+    /// <returns>Created maintenance record.</returns>
+    /// <response code="201">Maintenance record successfully created.</response>
+    /// <response code="400">Input validation error (e.g. past date or empty description).</response>
+    /// <response code="404">Equipment with specified EquipmentId not found.</response>
+    /// <response code="500">Internal server error.</response>
     [HttpPost]
     [ProducesResponseType(typeof(MaintenanceResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -61,7 +61,7 @@ public class MaintenancesController : ControllerBase
         var equipment = await _context.Equipments.FirstOrDefaultAsync();
         if (equipment == null || dto.EquipmentId <= 0)
         {
-            return NotFound($"Обладнання з Id {dto.EquipmentId} не знайдено.");
+            return NotFound($"Equipment with Id {dto.EquipmentId} not found.");
         }
 
         var maintenance = _mapper.Map<Maintenance>(dto);
@@ -75,18 +75,18 @@ public class MaintenancesController : ControllerBase
     }
 
     /// <summary>
-    /// Отримати список записів про обслуговування з фільтрацією.
+    /// Get list of maintenance records with optional filtering.
     /// </summary>
     /// <remarks>
-    /// Повертає список всіх записів про технічне обслуговування. Доступна фільтрація за обладнанням, статусом та діапазоном дат.
+    /// Returns a list of all maintenance records. Supports filtering by equipment, status, and date range.
     /// </remarks>
-    /// <param name="equipmentId">Опціональний фільтр за ідентифікатором обладнання.</param>
-    /// <param name="status">Опціональний фільтр за статусом (Scheduled, InProgress, Completed, Cancelled).</param>
-    /// <param name="fromDate">Початкова дата діапазону для фільтрації scheduledDate.</param>
-    /// <param name="toDate">Кінцева дата діапазону для фільтрації scheduledDate.</param>
-    /// <returns>Список відповідних записів про обслуговування.</returns>
-    /// <response code="200">Успішне отримання списку.</response>
-    /// <response code="500">Внутрішня помилка сервера.</response>
+    /// <param name="equipmentId">Optional filter by equipment ID.</param>
+    /// <param name="status">Optional filter by status (Scheduled, InProgress, Completed, Cancelled).</param>
+    /// <param name="fromDate">Start date for filtering scheduledDate.</param>
+    /// <param name="toDate">End date for filtering scheduledDate.</param>
+    /// <returns>List of matching maintenance records.</returns>
+    /// <response code="200">Successfully retrieved list.</response>
+    /// <response code="500">Internal server error.</response>
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<MaintenanceResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -123,13 +123,13 @@ public class MaintenancesController : ControllerBase
     }
 
     /// <summary>
-    /// Отримати конкретний запис про обслуговування за ідентифікатором.
+    /// Get specific maintenance record by identifier.
     /// </summary>
-    /// <param name="id">Унікальний ідентифікатор запису обслуговування.</param>
-    /// <returns>Детальні дані запису про обслуговування.</returns>
-    /// <response code="200">Запис знайдено та повернуто.</response>
-    /// <response code="404">Запис про обслуговування з вказаним Id не знайдено.</response>
-    /// <response code="500">Внутрішня помилка сервера.</response>
+    /// <param name="id">Unique identifier of the maintenance record.</param>
+    /// <returns>Detailed maintenance record data.</returns>
+    /// <response code="200">Record found and returned.</response>
+    /// <response code="404">Maintenance record with specified Id not found.</response>
+    /// <response code="500">Internal server error.</response>
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(MaintenanceResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -139,25 +139,25 @@ public class MaintenancesController : ControllerBase
         var maintenance = await _context.Maintenances.FindAsync(id);
         if (maintenance == null)
         {
-            return NotFound($"Запис про обслуговування з Id {id} не знайдено.");
+            return NotFound($"Maintenance record with Id {id} not found.");
         }
 
         return Ok(_mapper.Map<MaintenanceResponseDto>(maintenance));
     }
 
     /// <summary>
-    /// Оновити інформацію про обслуговування або змінити його статус.
+    /// Update maintenance information or change its status.
     /// </summary>
     /// <remarks>
-    /// Дозволяє оновити опис, статус та дату виконання. Перехід зі статусів Completed або Cancelled заборонено.
+    /// Updates description, status, and performed date. Transitioning from Completed or Cancelled status is restricted.
     /// </remarks>
-    /// <param name="id">Ідентифікатор запису обслуговування для оновлення.</param>
-    /// <param name="dto">Нові дані для оновлення.</param>
-    /// <returns>Оновлений запис обслуговування.</returns>
-    /// <response code="200">Запис успішно оновлено.</response>
-    /// <response code="400">Помилка валідації або спроба некоректного переходу статусу.</response>
-    /// <response code="404">Запис про обслуговування з вказаним Id не знайдено.</response>
-    /// <response code="500">Внутрішня помилка сервера.</response>
+    /// <param name="id">Identifier of the maintenance record to update.</param>
+    /// <param name="dto">New data for update.</param>
+    /// <returns>Updated maintenance record.</returns>
+    /// <response code="200">Record successfully updated.</response>
+    /// <response code="400">Validation error or invalid status transition.</response>
+    /// <response code="404">Maintenance record with specified Id not found.</response>
+    /// <response code="500">Internal server error.</response>
     [HttpPut("{id:int}")]
     [ProducesResponseType(typeof(MaintenanceResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -174,12 +174,12 @@ public class MaintenancesController : ControllerBase
         var maintenance = await _context.Maintenances.FindAsync(id);
         if (maintenance == null)
         {
-            return NotFound($"Запис про обслуговування з Id {id} не знайдено.");
+            return NotFound($"Maintenance record with Id {id} not found.");
         }
 
         if (maintenance.Status == MaintenanceStatus.Completed || maintenance.Status == MaintenanceStatus.Cancelled)
         {
-            return BadRequest($"Неможливо змінити статус для обслуговування зі статусом {maintenance.Status}.");
+            return BadRequest($"Cannot change status for maintenance with status {maintenance.Status}.");
         }
 
         _mapper.Map(dto, maintenance);

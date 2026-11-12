@@ -3,42 +3,42 @@
 namespace EquipmentMonitoring.Application.DTOs;
 
 /// <summary>
-/// DTO відповіді з повною інформацією про технічне обслуговування.
+/// DTO response containing full maintenance details.
 /// </summary>
 public class MaintenanceResponseDto
 {
     /// <summary>
-    /// Унікальний ідентифікатор запису обслуговування.
+    /// Unique identifier of the maintenance record.
     /// </summary>
     /// <example>1</example>
     public int Id { get; set; }
 
     /// <summary>
-    /// Ідентифікатор пов'язаного обладнання.
+    /// Identifier of the associated equipment.
     /// </summary>
     /// <example>1</example>
     public int EquipmentId { get; set; }
 
     /// <summary>
-    /// Запланована дата проведення обслуговування.
+    /// Scheduled date for maintenance.
     /// </summary>
     /// <example>2026-11-15T10:00:00Z</example>
     public DateTime ScheduledDate { get; set; }
 
     /// <summary>
-    /// Фактична дата проведення робіт.
+    /// Actual date when work was performed (null if not completed).
     /// </summary>
     /// <example>2026-11-15T12:30:00Z</example>
     public DateTime? PerformedDate { get; set; }
 
     /// <summary>
-    /// Опис робіт.
+    /// Work description.
     /// </summary>
-    /// <example>Заміна мастила та планова діагностика підшипників</example>
+    /// <example>Oil change and scheduled bearing diagnostics</example>
     public string Description { get; set; } = string.Empty;
 
     /// <summary>
-    /// Поточний статус обслуговування.
+    /// Current maintenance status.
     /// </summary>
     /// <example>Scheduled</example>
     public MaintenanceStatus Status { get; set; }
