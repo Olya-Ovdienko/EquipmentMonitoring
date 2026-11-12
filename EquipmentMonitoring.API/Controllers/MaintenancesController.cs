@@ -58,8 +58,8 @@ public class MaintenancesController : ControllerBase
             return BadRequest(validationResult.ToDictionary());
         }
 
-        var equipment = await _context.Equipments.FirstOrDefaultAsync();
-        if (equipment == null || dto.EquipmentId <= 0)
+        var equipment = await _context.Equipments.FirstOrDefaultAsync(e => e.Id == dto.EquipmentId);
+        if (equipment == null || dto.EquipmentId == Guid.Empty)
         {
             return NotFound($"Equipment with Id {dto.EquipmentId} not found.");
         }
@@ -91,7 +91,7 @@ public class MaintenancesController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<MaintenanceResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<MaintenanceResponseDto>>> GetAll(
-        [FromQuery] int? equipmentId,
+        [FromQuery] Guid? equipmentId,
         [FromQuery] MaintenanceStatus? status,
         [FromQuery] DateTime? fromDate,
         [FromQuery] DateTime? toDate)

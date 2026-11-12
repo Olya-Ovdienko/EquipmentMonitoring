@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace EquipmentMonitoring.Tests;
@@ -50,7 +49,9 @@ public class MaintenancesControllerTests
     [Fact]
     public async Task Create_ValidDto_Returns201Created()
     {
+        // Arrange
         var context = GetDbContext(seedEquipment: true);
+        var equipmentId = context.Equipments.First().Id;
         var controller = new MaintenancesController(
             context,
             GetMapper(),
@@ -59,13 +60,15 @@ public class MaintenancesControllerTests
 
         var dto = new CreateMaintenanceDto
         {
-            EquipmentId = 1,
+            EquipmentId = equipmentId,
             ScheduledDate = DateTime.UtcNow.AddDays(1),
             Description = "Планова діагностика"
         };
 
+        // Act
         var result = await controller.Create(dto);
 
+        // Assert
         var actionResult = Assert.IsType<CreatedAtActionResult>(result.Result);
         Assert.Equal(201, actionResult.StatusCode);
     }
@@ -73,6 +76,7 @@ public class MaintenancesControllerTests
     [Fact]
     public async Task Create_NonExistingEquipment_Returns404NotFound()
     {
+        // Arrange
         var context = GetDbContext(seedEquipment: false);
         var controller = new MaintenancesController(
             context,
@@ -82,21 +86,24 @@ public class MaintenancesControllerTests
 
         var dto = new CreateMaintenanceDto
         {
-            EquipmentId = 999,
+            EquipmentId = Guid.NewGuid(),
             ScheduledDate = DateTime.UtcNow.AddDays(1),
             Description = "Тест"
         };
 
+        // Act
         var result = await controller.Create(dto);
 
+        // Assert
         Assert.IsType<NotFoundObjectResult>(result.Result);
     }
 
     [Fact]
-    public async Task GetAll_ReturnsFilteredResults()
+    public async Task UpdateStatus_ToCompleted_UpdatesStatusAndPerformedDate()
     {
+        // Arrange
         var context = GetDbContext(seedEquipment: true);
-
+        var equipmentId = context.Equipments.First().Id;
         var controller = new MaintenancesController(
             context,
             GetMapper(),
@@ -105,14 +112,98 @@ public class MaintenancesControllerTests
 
         var createDto = new CreateMaintenanceDto
         {
-            EquipmentId = 1,
-            ScheduledDate = DateTime.UtcNow,
+            EquipmentId = equipmentId,
+            ScheduledDate = DateTime.UtcNow.AddDays(1),
+            Description = "Заміна деталі"
+        };
+        var createResult = await controller.Create(createDto);
+        var createdObject = Assert.IsType<CreatedAtActionResult>(createResult.Result).Value as MaintenanceResponseDto;
+
+        var updateDto = new UpdateMaintenanceDto
+        {
+            Description = "Робота виконана успішно",
+            Status = MaintenanceStatus.Completed,
+            PerformedDate = DateTime.UtcNow
+        };
+
+        // Act
+        var updateResult = await controller.Update(createdObject!.Id, updateDto);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(updateResult.Result);
+        var entity = await context.Maintenances.FindAsync(createdObject.Id);
+        Assert.NotNull(entity);
+        Assert.Equal(MaintenanceStatus.Completed, entity.Status);
+        Assert.NotNull(entity.PerformedDate);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_WhenAlreadyCompletedOrCancelled_ReturnsBadRequest()
+    {
+        // Arrange
+        var context = GetDbContext(seedEquipment: true);
+        var equipmentId = context.Equipments.First().Id;
+        var controller = new MaintenancesController(
+            context,
+            GetMapper(),
+            new CreateMaintenanceDtoValidator(),
+            new UpdateMaintenanceDtoValidator());
+
+        var createDto = new CreateMaintenanceDto
+        {
+            EquipmentId = equipmentId,
+            ScheduledDate = DateTime.UtcNow.AddDays(1),
+            Description = "Перевірка вузлів"
+        };
+        var createResult = await controller.Create(createDto);
+        var createdObject = Assert.IsType<CreatedAtActionResult>(createResult.Result).Value as MaintenanceResponseDto;
+
+        // Змінюємо стан на Completed
+        await controller.Update(createdObject!.Id, new UpdateMaintenanceDto
+        {
+            Description = "Завершено",
+            Status = MaintenanceStatus.Completed,
+            PerformedDate = DateTime.UtcNow
+        });
+
+        // Спроба повторно змінити стан після завершення
+        var invalidUpdateDto = new UpdateMaintenanceDto
+        {
+            Description = "Спроба відновити",
+            Status = MaintenanceStatus.Scheduled
+        };
+
+        // Act
+        var result = await controller.Update(createdObject.Id, invalidUpdateDto);
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetAll_ReturnsFilteredResults()
+    {
+        // Arrange
+        var context = GetDbContext(seedEquipment: true);
+        var equipmentId = context.Equipments.First().Id;
+        var controller = new MaintenancesController(
+            context,
+            GetMapper(),
+            new CreateMaintenanceDtoValidator(),
+            new UpdateMaintenanceDtoValidator());
+
+        var createDto = new CreateMaintenanceDto
+        {
+            EquipmentId = equipmentId,
+            ScheduledDate = DateTime.UtcNow.AddDays(1),
             Description = "Тестове обслуговування"
         };
         await controller.Create(createDto);
 
-        var result = await controller.GetAll(equipmentId: 1, status: MaintenanceStatus.Scheduled, fromDate: null, toDate: null);
+        // Act
+        var result = await controller.GetAll(equipmentId: equipmentId, status: MaintenanceStatus.Scheduled, fromDate: null, toDate: null);
 
+        // Assert
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
         var items = Assert.IsAssignableFrom<IEnumerable<MaintenanceResponseDto>>(okResult.Value);
         Assert.NotEmpty(items);
