@@ -8,17 +8,15 @@ public class CreateMaintenanceDtoValidator : AbstractValidator<CreateMaintenance
     public CreateMaintenanceDtoValidator()
     {
         RuleFor(x => x.EquipmentId)
-            .GreaterThan(0)
-            .WithMessage("Ідентифікатор обладнання повинен бути більше 0.");
+            .NotEmpty()
+            .WithMessage("EquipmentId is required.");
 
         RuleFor(x => x.ScheduledDate)
-            .GreaterThanOrEqualTo(DateTime.UtcNow.Date)
-            .WithMessage("Запланована дата не може бути в минулому.");
+            .NotEmpty()
+            .WithMessage("ScheduledDate is required.");
 
         RuleFor(x => x.Description)
             .NotEmpty()
-            .WithMessage("Опис є обов'язковим.")
-            .MaximumLength(500)
-            .WithMessage("Опис не повинен перевищувати 500 символів.");
+            .WithMessage("Description is required.");
     }
 }

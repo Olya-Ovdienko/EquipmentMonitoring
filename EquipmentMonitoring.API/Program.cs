@@ -8,6 +8,7 @@ using EquipmentMonitoring.API.Swagger;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using EquipmentMonitoring.Application.Abstractions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,12 +37,15 @@ builder.Services.AddScoped<IEquipmentRepository, EquipmentRepository>();
 builder.Services.AddScoped<IMeasurementRepository, MeasurementRepository>();
 builder.Services.AddScoped<IThresholdRepository, ThresholdRepository>();
 builder.Services.AddScoped<IAlertRepository, AlertRepository>();
+builder.Services.AddScoped<IMaintenanceRepository, MaintenanceRepository>();
 builder.Services.AddScoped<IEquipmentRegistrationService, EquipmentRegistrationService>();
 builder.Services.AddScoped<IMeasurementService, MeasurementService>();
 builder.Services.AddScoped<IMeasurementAlertService, MeasurementAlertService>();
 builder.Services.AddScoped<IAlertService, AlertService>();
 builder.Services.AddScoped<IValidator<CreateEquipmentDto>, CreateEquipmentDtoValidator>();
 builder.Services.AddScoped<IValidator<CreateMeasurementDto>, CreateMeasurementDtoValidator>();
+builder.Services.AddScoped<IValidator<CreateMaintenanceDto>, CreateMaintenanceDtoValidator>();
+builder.Services.AddScoped<IValidator<UpdateMaintenanceDto>, UpdateMaintenanceDtoValidator>();
 builder.Services.AddScoped<IValidator<UpdateEquipmentDto>, UpdateEquipmentDtoValidator>();
 
 var app = builder.Build();
