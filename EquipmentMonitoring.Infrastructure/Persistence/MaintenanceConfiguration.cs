@@ -14,6 +14,8 @@ public class MaintenanceConfiguration : IEntityTypeConfiguration<Maintenance>
             .IsRequired()
             .HasMaxLength(500);
 
+        builder.Property(m => m.EquipmentId).IsRequired();
+
         builder.Property(m => m.Status)
             .IsRequired();
 

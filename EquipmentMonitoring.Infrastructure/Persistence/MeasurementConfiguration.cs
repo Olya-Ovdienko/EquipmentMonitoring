@@ -1,7 +1,6 @@
 using EquipmentMonitoring.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace EquipmentMonitoring.Infrastructure.Persistence;
 
@@ -16,11 +15,7 @@ public sealed class MeasurementConfiguration : IEntityTypeConfiguration<Measurem
         builder.Property(measurement => measurement.Type).IsRequired();
         builder.Property(measurement => measurement.Value).IsRequired();
         builder.Property(measurement => measurement.Unit).IsRequired();
-        builder.Property(measurement => measurement.Timestamp)
-            .IsRequired()
-            .HasConversion(new ValueConverter<DateTime, long>(
-                timestamp => timestamp.Ticks,
-                ticks => new DateTime(ticks, DateTimeKind.Utc)));
+        builder.Property(measurement => measurement.Timestamp).IsRequired();
 
         builder.HasOne<Equipment>()
             .WithMany()
