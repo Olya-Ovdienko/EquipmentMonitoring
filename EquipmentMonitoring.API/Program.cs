@@ -55,6 +55,13 @@ builder.Services.AddScoped<IValidator<UpdateMaintenanceDto>, UpdateMaintenanceDt
 builder.Services.AddScoped<IValidator<UpdateEquipmentDto>, UpdateEquipmentDtoValidator>();
 
 var app = builder.Build();
+//3
+if (!string.Equals(builder.Configuration["DatabaseProvider"], "Sqlite", StringComparison.OrdinalIgnoreCase))
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<EquipmentDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
 
 // Enable Swagger in development
 if (app.Environment.IsDevelopment())
