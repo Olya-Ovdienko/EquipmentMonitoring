@@ -8,7 +8,6 @@ using EquipmentMonitoring.API.Swagger;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using EquipmentMonitoring.Application.Abstractions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,8 +29,15 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var connectionString = builder.Configuration.GetConnectionString("EquipmentDatabase")
-    ?? $"Data Source={Path.Combine(builder.Environment.ContentRootPath, "equipmentmonitoring.db")}";
-builder.Services.AddDbContext<EquipmentDbContext>(options => options.UseSqlite(connectionString));
+    ?? "Host=localhost;Port=5432;Database=equipmentmonitoring;Username=postgres";
+if (string.Equals(builder.Configuration["DatabaseProvider"], "Sqlite", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddDbContext<EquipmentDbContext>(options => options.UseSqlite(connectionString));
+}
+else
+{
+    builder.Services.AddDbContext<EquipmentDbContext>(options => options.UseNpgsql(connectionString));
+}
 builder.Services.AddScoped<IEquipmentSerialNumberChecker, EquipmentSerialNumberChecker>();
 builder.Services.AddScoped<IEquipmentRepository, EquipmentRepository>();
 builder.Services.AddScoped<IMeasurementRepository, MeasurementRepository>();
@@ -49,6 +55,13 @@ builder.Services.AddScoped<IValidator<UpdateMaintenanceDto>, UpdateMaintenanceDt
 builder.Services.AddScoped<IValidator<UpdateEquipmentDto>, UpdateEquipmentDtoValidator>();
 
 var app = builder.Build();
+//3
+if (!string.Equals(builder.Configuration["DatabaseProvider"], "Sqlite", StringComparison.OrdinalIgnoreCase))
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<EquipmentDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
 
 // Enable Swagger in development
 if (app.Environment.IsDevelopment())

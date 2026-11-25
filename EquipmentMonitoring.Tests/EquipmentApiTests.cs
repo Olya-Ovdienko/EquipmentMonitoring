@@ -256,6 +256,7 @@ public class EquipmentApiTests
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
+            builder.UseSetting("DatabaseProvider", "Sqlite");
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<DbContextOptions<EquipmentDbContext>>();

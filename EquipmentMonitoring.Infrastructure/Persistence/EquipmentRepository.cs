@@ -1,8 +1,9 @@
 using EquipmentMonitoring.Application.Abstractions;
 using EquipmentMonitoring.Application.Exceptions;
 using EquipmentMonitoring.Domain;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using Microsoft.Data.Sqlite;
 
 namespace EquipmentMonitoring.Infrastructure.Persistence;
 
@@ -31,12 +32,20 @@ public sealed class EquipmentRepository(EquipmentDbContext dbContext) : IEquipme
 
     private static bool IsSerialNumberUniqueConstraintViolation(DbUpdateException exception)
     {
-        return exception.InnerException is SqliteException
+        return exception.InnerException switch
         {
-            SqliteExtendedErrorCode: 2067
-        } sqliteException
-        && sqliteException.Message.Contains(
-            "UNIQUE constraint failed: Equipments.SerialNumber",
-            StringComparison.Ordinal);
+            SqliteException
+            {
+                SqliteExtendedErrorCode: 2067
+            } sqliteException => sqliteException.Message.Contains(
+                "UNIQUE constraint failed: Equipments.SerialNumber",
+                StringComparison.Ordinal),
+            PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation,
+                ConstraintName: "IX_Equipments_SerialNumber"
+            } => true,
+            _ => false
+        };
     }
 }

@@ -1,7 +1,6 @@
 using EquipmentMonitoring.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace EquipmentMonitoring.Infrastructure.Persistence;
 
@@ -16,11 +15,7 @@ public sealed class AlertConfiguration : IEntityTypeConfiguration<Alert>
         builder.Property(alert => alert.MeasurementId).IsRequired();
         builder.Property(alert => alert.Message).IsRequired();
         builder.Property(alert => alert.Severity).IsRequired();
-        builder.Property(alert => alert.Timestamp)
-            .IsRequired()
-            .HasConversion(new ValueConverter<DateTime, long>(
-                timestamp => timestamp.Ticks,
-                ticks => new DateTime(ticks, DateTimeKind.Utc)));
+        builder.Property(alert => alert.Timestamp).IsRequired();
         builder.Property(alert => alert.IsAcknowledged).IsRequired();
 
         builder.HasOne<Equipment>()
