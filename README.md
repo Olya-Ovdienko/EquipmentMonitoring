@@ -1,129 +1,208 @@
 # EquipmentMonitoring
 
-## Про проєкт
+## Призначення
 
-EquipmentMonitoring — навчальний ASP.NET Core Web API для реєстрації обладнання та зберігання і перегляду його вимірювань. Рішення орієнтоване на .NET 10, SQLite та Entity Framework Core.
+EquipmentMonitoring — ASP.NET Core Web API для реєстрації обладнання, збереження та перегляду вимірювань, налаштування порогів, роботи зі сповіщеннями й технічним обслуговуванням. Рішення цільово використовує **.NET 10** і побудоване з розділенням на доменний, прикладний, інфраструктурний та API-рівні.
 
-### Статус функціональності
+Основна база даних — **PostgreSQL 17**. Доступ до неї реалізовано через **Npgsql** та **Entity Framework Core**. SQLite-провайдер залишається у складі Infrastructure для ізольованих тестових сценаріїв; Docker Compose і типовий запуск API використовують PostgreSQL.
 
-- **EPT-4 — реєстрація обладнання:** реалізовано. Доступні створення обладнання, валідація полів і унікальності серійного номера.
-- **EPT-5 — додавання та перегляд вимірювань:** реалізовано. Доступні створення вимірювань і перегляд історії з фільтрами за типом та діапазоном дат.
-- **EPT-6 — контроль перевищень і попередження:** ще не реалізовано.
-- **EPT-7 — планування технічного обслуговування:** ще не реалізовано.
-
-## Структура рішення
+## Архітектура рішення
 
 `EquipmentMonitoring.slnx` містить п'ять проєктів:
 
-- **EquipmentMonitoring.Domain** — доменні сутності та типи.
-- **EquipmentMonitoring.Application** — DTO, інтерфейси, сервіси та FluentValidation.
-- **EquipmentMonitoring.Infrastructure** — EF Core, SQLite, конфігурація DbContext, міграції та репозиторії.
-- **EquipmentMonitoring.API** — ASP.NET Core контролери, API та Swagger/OpenAPI.
-- **EquipmentMonitoring.Tests** — тести xUnit v3, включно з модульними й інтеграційними тестами.
+- **EquipmentMonitoring.Domain** — доменні сутності, правила й типи предметної області.
+- **EquipmentMonitoring.Application** — DTO, абстракції, сервіси та валідація запитів через FluentValidation.
+- **EquipmentMonitoring.Infrastructure** — репозиторії, EF Core `EquipmentDbContext`, конфігурації сутностей, провайдери БД і міграції.
+- **EquipmentMonitoring.API** — ASP.NET Core контролери, конфігурація залежностей та Swagger/OpenAPI.
+- **EquipmentMonitoring.Tests** — модульні й інтеграційні тести на xUnit v3.
 
-## Вимоги
+Ключові сценарії API охоплюють реєстрацію обладнання з перевіркою унікальності серійного номера, створення та фільтрацію вимірювань, а також маршрути для порогів, сповіщень і технічного обслуговування. Актуальний контракт API описаний у Swagger.
 
-- **.NET 10 SDK** (для розробки та запуску потрібна актуальна версія SDK гілки .NET 10; проєкти цільово використовують `net10.0`).
-- Visual Studio 2026 з підтримкою ASP.NET Core або інше середовище розробки .NET.
-- Для створення БД через Package Manager Console у Visual Studio доступні EF Core Tools 10.0.14; пакет інструментів налаштований у `EquipmentMonitoring.Infrastructure`.
+## Технології та вимоги
 
-## Початок роботи
+- .NET 10 SDK — для локальної розробки та запуску тестів.
+- Docker Desktop із Docker Compose v2 — для запуску всього середовища в контейнерах.
+- PostgreSQL 17 — основна база даних.
+- Npgsql та Entity Framework Core — PostgreSQL provider і ORM.
+- Visual Studio 2026 або інше сумісне середовище розробки .NET.
 
-1. Клонуйте репозиторій і перейдіть до його каталогу:
+## Запуск через Docker Compose
 
-   ```powershell
-   git clone https://github.com/Olya-Ovdienko/EquipmentMonitoring.git
-   cd EquipmentMonitoring
-   ```
+Compose-конфігурація запускає три сервіси:
 
-2. Встановіть .NET 10 SDK і перевірте його наявність:
+| Сервіс | Призначення | Адреса з хоста |
+| --- | --- | --- |
+| `api` | ASP.NET Core Web API | `http://localhost:8080` |
+| `postgres` | PostgreSQL 17 | порт `5432` |
+| `pgadmin` | Вебінтерфейс адміністрування PostgreSQL | `http://localhost:5050` |
 
-   ```powershell
-   dotnet --list-sdks
-   ```
+### 1. Встановіть і запустіть Docker Desktop
 
-   У списку має бути SDK версії `10.x`.
-
-3. Відкрийте `EquipmentMonitoring.slnx` у Visual Studio (File → Open → Project/Solution). Для запуску виберіть `EquipmentMonitoring.API` як Startup Project.
-
-4. Відновіть NuGet-пакети з кореня репозиторію:
-
-   ```powershell
-   dotnet restore EquipmentMonitoring.slnx
-   ```
-
-## Локальна SQLite-база даних
-
-База створюється **окремо на кожному комп'ютері** з наявних EF Core міграцій. У репозиторії є міграції `InitialEquipment` і `AddMeasurements`. `EquipmentDbContextFactory` налаштовує SQLite-файл за шляхом `EquipmentMonitoring.API\equipmentmonitoring.db`; цей файл та SQLite journal-файли ігноруються Git, тому локальні дані не передаються іншим учасникам.
-
-### Створення бази у Visual Studio
-
-1. Відкрийте **Tools → NuGet Package Manager → Package Manager Console**.
-2. У списку **Default project** виберіть `EquipmentMonitoring.Infrastructure`.
-3. Переконайтеся, що **Startup Project** рішення — `EquipmentMonitoring.API`.
-4. Виконайте команду:
-
-   ```powershell
-   Update-Database -Project EquipmentMonitoring.Infrastructure -StartupProject EquipmentMonitoring.API -Context EquipmentDbContext
-   ```
-
-Це використовує наявний `EquipmentDbContextFactory` із проєкту Infrastructure і застосовує міграції до `EquipmentMonitoring.API\equipmentmonitoring.db`. Під час першого запуску команди EF Core створить файл БД і таблиці. Не потрібно створювати таблиці вручну або використовувати `EnsureCreated` замість міграцій.
-
-## Запуск API та Swagger
-
-Запустіть `EquipmentMonitoring.API` у Visual Studio через **Ctrl+F5** або з кореня репозиторію командою:
+Встановіть Docker Desktop для своєї операційної системи та дочекайтеся стану **Engine running**. Переконайтеся, що Docker Compose доступний:
 
 ```powershell
-dotnet run --project EquipmentMonitoring.API
+docker --version
+docker compose version
 ```
 
-Профіль запуску Visual Studio використовує середовище `Development` і адреси `https://localhost:54960` та `http://localhost:54961`. Swagger увімкнений у Development:
+### 2. Створіть локальний файл середовища
 
-- Swagger UI: `https://localhost:54960/swagger` (або `http://localhost:54961/swagger`)
-- OpenAPI JSON: `https://localhost:54960/swagger/v1/swagger.json` (або `http://localhost:54961/swagger/v1/swagger.json`)
+У корені репозиторію скопіюйте шаблон:
 
-Якщо запускаєте API на іншій адресі або порті, використовуйте відповідну адресу для Swagger.
+```powershell
+Copy-Item .env.example .env
+```
 
-## Перевірка основного сценарію через Swagger
+Відредагуйте `.env` і задайте власні локальні значення для змінних:
 
-1. Відкрийте Swagger UI та виконайте `POST /api/v1/equipment`, створивши обладнання, наприклад:
+- `POSTGRES_DB` — назва бази (шаблон використовує `equipmentmonitoring`).
+- `POSTGRES_USER` — користувач PostgreSQL.
+- `POSTGRES_PASSWORD` — локальний пароль PostgreSQL.
+- `PGADMIN_DEFAULT_EMAIL` — адреса входу до pgAdmin.
+- `PGADMIN_DEFAULT_PASSWORD` — локальний пароль pgAdmin.
 
-   ```json
-   {
-     "name": "Temperature Sensor",
-     "type": "Датчик",
-     "serialNumber": "DOC-001",
-     "location": "Laboratory 1"
-   }
-   ```
+Замініть усі шаблонні паролі на власні тестові значення. Не додавайте `.env` або справжні паролі до Git. Файл `.env` уже виключений правилами `.gitignore`; для спільного використання призначений лише `.env.example`.
 
-2. У відповіді `201 Created` скопіюйте `id` створеного обладнання.
-3. Виконайте `POST /api/v1/measurements`. У полі `equipmentId` передайте цей `id`; вкажіть підтримуваний `type` (числове enum-значення: `0` — Temperature, `1` — Voltage, `2` — Load) і виміряне `value`. `timestamp` необов'язковий.
-4. Виконайте `GET /api/v1/equipment/{equipmentId}/measurements`, підставивши той самий Id. За потреби додайте query-фільтри `type`, `startDate` та `endDate`. Межі дат включні.
+### 3. Перевірте конфігурацію та запустіть сервіси
 
-> У Jira для фільтрів EPT-21 зазначені `fromDate`/`toDate`, але фактичний контракт API використовує `startDate`/`endDate`. У запитах використовуйте реальні параметри `startDate` і `endDate`.
+З кореня репозиторію виконайте:
+
+```powershell
+docker compose config --quiet
+docker compose up -d --build
+```
+
+Команда збирає образ API з наявного `Dockerfile` і запускає API, PostgreSQL та pgAdmin. API підключається до PostgreSQL за DNS-іменем сервісу `postgres` у внутрішній мережі Compose. Не використовуйте `localhost` як хост БД з контейнера API.
+
+### 4. Перевірте стан контейнерів
+
+```powershell
+docker compose ps
+docker compose logs --tail 100 api postgres pgadmin
+```
+
+PostgreSQL має перейти у стан `healthy`; API та pgAdmin мають бути `running`. Якщо сервіс не готовий, перегляньте його логи перед повторними спробами.
+
+### 5. Відкрийте застосунки
+
+- **Swagger UI:** [http://localhost:8080/swagger](http://localhost:8080/swagger)
+- **pgAdmin:** [http://localhost:5050](http://localhost:5050)
+- **PostgreSQL:** `localhost:5432` з хоста; порт `5432` у контейнерній мережі.
+
+Для входу до pgAdmin використовуйте `PGADMIN_DEFAULT_EMAIL` і `PGADMIN_DEFAULT_PASSWORD` зі свого локального `.env`.
+
+### Реєстрація PostgreSQL у pgAdmin
+
+Після входу до pgAdmin:
+
+1. Виберіть **Add New Server**.
+2. На вкладці **General** задайте довільну назву, наприклад `EquipmentMonitoring`.
+3. На вкладці **Connection** укажіть:
+   - **Host name/address:** `postgres`
+   - **Port:** `5432`
+   - **Maintenance database:** значення `POSTGRES_DB` (типово `equipmentmonitoring`)
+   - **Username:** значення `POSTGRES_USER`
+   - **Password:** значення `POSTGRES_PASSWORD`
+4. Увімкніть збереження пароля за потреби та збережіть сервер.
+
+`postgres` — DNS-ім'я сервісу в мережі Docker Compose. Якщо під'єднуєтеся до PostgreSQL безпосередньо з хоста, використовуйте `localhost:5432`.
+
+## Міграції та схема бази даних
+
+Під час запуску API у PostgreSQL-середовищі застосовуються наявні EF Core міграції через `Database.MigrateAsync()`. Compose чекає на успішну перевірку готовності PostgreSQL перед запуском API. Для ручного запуску міграцій через EF Core використовуйте Infrastructure як проєкт і API як startup-проєкт, задавши `ConnectionStrings__EquipmentDatabase` для цільової БД.
+
+Модель містить п'ять основних таблиць:
+
+- `Equipments` — обладнання.
+- `Measurements` — вимірювання, пов'язані з обладнанням.
+- `Thresholds` — порогові значення для обладнання та типів вимірювань.
+- `Alerts` — сповіщення, пов'язані з обладнанням і вимірюванням.
+- `Maintenances` — записи технічного обслуговування.
+
+Міграції створюють первинні й зовнішні ключі та індекси, зокрема унікальний індекс серійного номера обладнання. Не створюйте таблиці вручну паралельно з EF Core міграціями.
+
+## Збереження даних і зупинка
+
+Compose підключає іменований Docker Volume `equipmentmonitoring-postgres-data` до каталогу даних PostgreSQL. Дані зберігаються у Volume і мають переживати перезапуск або пересоздання контейнера PostgreSQL.
+
+Безпечна тимчасова зупинка без видалення контейнерів і даних:
+
+```powershell
+docker compose stop
+```
+
+Щоб знову запустити зупинені сервіси:
+
+```powershell
+docker compose start
+```
+
+`docker compose down` зупиняє та прибирає контейнери й мережу, але іменований Volume зберігається, якщо не вказувати `-v`. **Не використовуйте `docker compose down -v`**, якщо потрібно зберегти базу даних. Перед будь-яким очищенням Docker-ресурсів переконайтеся, що потрібні дані мають резервну копію.
+
+## Перевірка API
+
+Swagger UI містить актуальні схеми та дозволяє виконати запити без додаткового клієнта. Основні маршрути:
+
+- `POST /api/v1/equipment` — реєстрація обладнання.
+- `POST /api/v1/measurements` — створення вимірювання.
+- `GET /api/v1/equipment/{equipmentId}/measurements` — історія вимірювань з необов'язковими фільтрами `type`, `startDate` і `endDate` (межі дат включні).
+
+### 1. Зареєструйте обладнання
+
+У Swagger виконайте `POST /api/v1/equipment` із JSON тілом:
+
+```json
+{
+  "name": "Temperature Sensor",
+  "type": "Датчик",
+  "serialNumber": "DOC-001-REPLACE-ME",
+  "location": "Laboratory 1"
+}
+```
+
+`serialNumber` має бути унікальним; замініть приклад на значення, якого ще немає в БД. Успішна відповідь `201 Created` містить `id` обладнання.
+
+### 2. Додайте вимірювання
+
+Передайте `id`, отриманий у відповіді попереднього запиту. Тип вимірювання — числове enum-значення: `0` — Temperature, `1` — Voltage, `2` — Load. `timestamp` необов'язковий; якщо його передаєте, використовуйте UTC.
+
+```json
+{
+  "equipmentId": "PASTE-EQUIPMENT-GUID-HERE",
+  "type": 0,
+  "value": 23.5
+}
+```
+
+Виконайте запит до `POST /api/v1/measurements`. Обладнання з таким ID має існувати.
+
+### 3. Перегляньте історію
+
+```http
+GET /api/v1/equipment/PASTE-EQUIPMENT-GUID-HERE/measurements
+```
+
+Приклад із фільтрами:
+
+```http
+GET /api/v1/equipment/PASTE-EQUIPMENT-GUID-HERE/measurements?type=Temperature&startDate=2026-01-01T00:00:00Z&endDate=2026-12-31T23:59:59Z
+```
+
+У фактичному контракті використовуються `startDate` і `endDate`.
 
 ## Тести
 
-Запустити всі тести з кореня репозиторію:
+Для запуску тестів із кореня репозиторію:
 
 ```powershell
 dotnet test EquipmentMonitoring.slnx
 ```
 
-Або у Visual Studio відкрийте **Test → Test Explorer → Run All Tests**. Останній відомий результат команди: **208 Passed, 0 Failed**. Перед Pull Request повторно виконуйте збірку рішення та всі тести.
+Або відкрийте **Test → Test Explorer** у Visual Studio та запустіть потрібні тести. Результат залежить від поточного стану коду й середовища; перед змінами або демонстрацією запускайте тести повторно. Цей README не фіксує застарілий результат попереднього запуску.
 
 ## Командна робота
 
-- `master` — основна гілка.
-- Для кожної задачі створюйте окрему feature-гілку від актуального `master`, наприклад `feature/EPT-6-alerts` або `feature/EPT-7-maintenance`.
-- Прив'язуйте назви комітів і повідомлення до ключа Jira (наприклад, `EPT-6: ...`).
-- Інтегруйте зміни через Pull Request; перед злиттям перевіряйте збірку та всі тести.
-- Не змінюйте чужі функціональні модулі без необхідності; узгоджуйте зміни спільних контрактів із командою.
-- Не додавайте до Git локальні SQLite-файли, секрети або персональні налаштування середовища.
-
-## Основні API-маршрути
-
-- `POST /api/v1/equipment` — реєстрація обладнання.
-- `POST /api/v1/measurements` — створення вимірювання.
-- `GET /api/v1/equipment/{equipmentId}/measurements` — історія вимірювань обладнання з необов'язковими фільтрами `type`, `startDate` і `endDate`.
+- `master` — основна гілка репозиторію.
+- Для задач створюйте окремі feature-гілки від актуальної основної гілки.
+- Інтегруйте зміни через Pull Request та перевіряйте збірку й тести.
+- Не додавайте до Git локальний `.env`, паролі чи інші секрети.
